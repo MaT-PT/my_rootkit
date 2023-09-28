@@ -9,5 +9,8 @@
 *.order
 *.order.cmd
 *.mod.c
-modules/
+/modules/
 .vscode/
+/linux-*/
+*.img
+*.qcow2
