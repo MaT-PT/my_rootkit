@@ -3,7 +3,7 @@
 ########################################################################
 VERSION="5.15.132"
 BRANCH="v5.x"
-LOCALVERSION="-kernel2600"
+LOCALVERSION="-lfs2600"
 NPROC="$((`nproc` - 1))"
 ########################################################################
 
@@ -19,7 +19,6 @@ cd "linux-${VERSION}"
 make defconfig
 make kvm_guest.config
 ./scripts/config --set-str LOCALVERSION "${LOCALVERSION}"
-./scripts/config --enable MY_SYSCALL_HELLO
 
 # Build kernel
 echo "* Building kernel..."

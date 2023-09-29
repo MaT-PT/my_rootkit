@@ -2,7 +2,7 @@
 
 ########################################################################
 DISK_IMG="disk.img"
-DISK_QCOW2="disk.qcow2"
+# DISK_QCOW2="disk.qcow2"
 DISK_SIZE="512M"
 ROOTFS="/tmp/my-rootfs"
 KERNEL="$(ls -1 -- linux-*/arch/x86/boot/bzImage | sort -V | tail -n 1)"
@@ -15,17 +15,35 @@ MEM="1G"
 echo "* Using kernel: $KERNEL"
 echo
 
+# Unmount/disconnect existing loop devices
+while true; do
+    loop_dev=$(losetup -l | grep -- "$DISK_IMG" | cut -d ' ' -f 1 | head -n 1)
+    if [ -n "$loop_dev" ]; then
+        sudo umount -f -l -- "$ROOTFS" 2> /dev/null
+        echo -n "  * Removing existing loop device $loop_dev..."
+        if sudo losetup -d "$loop_dev"; then
+            echo " done"
+        else
+            echo
+            echo "Error: Failed to remove loop device $loop_dev"
+            return 1 2> /dev/null || exit 1
+        fi
+    else
+        break
+    fi
+done
+
 if [ -f "$DISK_IMG" ]; then
     echo -n "* Removing existing disk image file $DISK_IMG..."
     rm -- "$DISK_IMG"
     echo " done"
 fi
 
-if [ -f "$DISK_QCOW2" ]; then
-    echo -n "* Removing existing QCOW2 image file $DISK_QCOW2..."
-    rm -- "$DISK_QCOW2"
-    echo " done"
-fi
+# if [ -f "$DISK_QCOW2" ]; then
+#     echo -n "* Removing existing QCOW2 image file $DISK_QCOW2..."
+#     rm -- "$DISK_QCOW2"
+#     echo " done"
+# fi
 
 # Create disk image file
 echo -n "* Creating disk image file $DISK_IMG with size $DISK_SIZE..."
@@ -45,22 +63,6 @@ echo " done"
 
 # Create loop device
 echo "* Creating loop device..."
-while true; do
-    loop_dev=$(losetup -l | grep -- "$DISK_IMG" | cut -d ' ' -f 1 | head -n 1)
-    if [ -n "$loop_dev" ]; then
-        sudo umount -f -l -- "$ROOTFS" 2> /dev/null
-        echo -n "  * Removing existing loop device $loop_dev..."
-        if sudo losetup -d "$loop_dev"; then
-            echo " done"
-        else
-            echo
-            echo "Error: Failed to remove loop device $loop_dev"
-            return 1 2> /dev/null || exit 1
-        fi
-    else
-        break
-    fi
-done
 sudo losetup -Pf "$DISK_IMG"
 loop_dev=$(losetup -l | grep -- "$DISK_IMG" | cut -d ' ' -f 1 | head -n 1)
 if [ -z "$loop_dev" ]; then
@@ -94,7 +96,6 @@ echo " done"
 # Configure Alpine Linux
 echo "* Configuring Alpine Linux..."
 sudo docker exec "$docker" sh -c 'apk add openrc util-linux build-base vim python3'
-# docker exec "$docker" sh -c 'apk add openrc util-linux'
 sudo docker exec "$docker" sh -c "echo '${HOSTNAME}' > /etc/hostname"
 sudo docker exec "$docker" sh -c 'echo "auto lo" > /etc/network/interfaces'
 sudo docker exec "$docker" sh -c 'echo "iface lo inet loopback" >> /etc/network/interfaces'
@@ -146,24 +147,33 @@ sudo umount -f -l -- "$ROOTFS"
 sudo losetup -d "$loop_dev"
 echo " done"
 
-# Convert disk image to qcow2
-echo "* Converting $DISK_IMG image to $DISK_QCOW2..."
-qemu-img convert -f raw -O qcow2 -p -c -W -m 16 "$DISK_IMG" "$DISK_QCOW2"
-echo "Done"
+# # Convert disk image to qcow2
+# echo "* Converting $DISK_IMG image to $DISK_QCOW2..."
+# qemu-img convert -f raw -O qcow2 -p -c -W -m 16 "$DISK_IMG" "$DISK_QCOW2"
+# echo "* Done"
 
-# Run QEMU
-if grep -E 'svm|vmx' /proc/cpuinfo > /dev/null && lsmod | grep '^kvm' > /dev/null; then
-    msg="* Running QEMU with KVM..."
-    args=( -enable-kvm -cpu host )
-else
-    msg="* Running QEMU without KVM..."
-    args=( )
-fi
-echo "$msg"
-echo -n "Press [Enter] to start"
+# # Run QEMU
+# if grep -Eq 'svm|vmx' /proc/cpuinfo > /dev/null && lsmod | grep -q '^kvm'; then
+#     msg="* Running QEMU with KVM..."
+#     args=( -enable-kvm -cpu host )
+# else
+#     msg="* Running QEMU without KVM..."
+#     args=( )
+# fi
+# echo "$msg"
+# echo -n "Press [Enter] to start"
+# read rd
+# qemu-system-x86_64 "${args[@]}" -smp $SMP -m "$MEM" \
+#     -drive file="${DISK_IMG},index=0,media=disk,format=raw" -nographic
+#     # -drive file="${DISK_QCOW2},index=0,media=disk,format=qcow2" -nographic
+
+echo
+echo "* Image file $DISK_IMG created successfully"
+echo
+echo "------------------------------------------------------------------------"
+echo -n "Press [Enter] to update modules/test files, and start QEMU; press Ctrl-C to exit"
 read rd
-qemu-system-x86_64 "${args[@]}" -smp $SMP -m "$MEM" \
-    -drive file="${DISK_QCOW2},index=0,media=disk,format=qcow2" -nographic
+$(dirname -- "$0")/update-kernel-img.sh
 
 ret=$?
 return $ret 2> /dev/null || exit $ret
