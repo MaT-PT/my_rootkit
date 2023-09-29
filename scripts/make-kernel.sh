@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ########################################################################
-VERSION="5.15.132"
+VERSION="5.15.133"
 BRANCH="v5.x"
-LOCALVERSION="-lfs2600"
+# LOCALVERSION="-lfs2600"
 NPROC="$((`nproc` - 1))"
 ########################################################################
 
@@ -18,11 +18,12 @@ echo "* Configuring kernel..."
 cd "linux-${VERSION}"
 make defconfig
 make kvm_guest.config
-./scripts/config --set-str LOCALVERSION "${LOCALVERSION}"
+# ./scripts/config --set-str LOCALVERSION "${LOCALVERSION}"
 
 # Build kernel
 echo "* Building kernel..."
 make -j${NPROC} bzImage
+make -j${NPROC} modules
 
 ret=$?
 return $ret 2> /dev/null || exit $ret

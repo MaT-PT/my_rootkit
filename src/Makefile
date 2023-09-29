@@ -1,4 +1,4 @@
-KDIR ?= /home/mat/git/kernel/scripts/linux-5.15.y/
+KDIR ?= ../linux-5.15.y/
 
 .PHONY: modules clean
 

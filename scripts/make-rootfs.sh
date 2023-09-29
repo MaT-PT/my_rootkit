@@ -5,15 +5,11 @@ DISK_IMG="disk.img"
 # DISK_QCOW2="disk.qcow2"
 DISK_SIZE="512M"
 ROOTFS="/tmp/my-rootfs"
-KERNEL="$(ls -1 -- linux-*/arch/x86/boot/bzImage | sort -V | tail -n 1)"
 HOSTNAME="lfs2600"
 BANNER="$(dirname -- "$0")/banner"
 SMP="$(($(nproc) / 2))"
 MEM="1G"
 ########################################################################
-
-echo "* Using kernel: $KERNEL"
-echo
 
 # Unmount/disconnect existing loop devices
 while true; do
@@ -122,10 +118,9 @@ echo -n "* Stopping docker container $docker..."
 sudo docker stop "$docker" > /dev/null
 echo " done"
 
-# Install kernel and GRUB
-echo "* Installing kernel and GRUB..."
+# Install GRUB
+echo "* Installing GRUB..."
 sudo mkdir -p -- "${ROOTFS}/boot/grub"
-sudo cp -- "$KERNEL" "${ROOTFS}/boot/vmlinuz"
 sudo tee -- "${ROOTFS}/boot/grub/grub.cfg" > /dev/null <<EOF
 serial
 terminal_output serial
@@ -171,7 +166,7 @@ echo
 echo "* Image file $DISK_IMG created successfully"
 echo
 echo "------------------------------------------------------------------------"
-echo -n "Press [Enter] to update modules/test files, and start QEMU; press Ctrl-C to exit"
+echo -n "Press [Enter] to update kernel/modules/test files, and start QEMU; press Ctrl-C to exit"
 read rd
 $(dirname -- "$0")/update-kernel-img.sh
 
