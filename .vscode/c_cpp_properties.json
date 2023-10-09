@@ -1,0 +1,29 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/linux-5.15.y/include",
+                "${workspaceFolder}/linux-5.15.y/include/uapi",
+                "${workspaceFolder}/linux-5.15.y/include/generated",
+                "${workspaceFolder}/linux-5.15.y/include/generated/uapi",
+                "${workspaceFolder}/linux-5.15.y/arch/x86/include",
+                "${workspaceFolder}/linux-5.15.y/arch/x86/include/generated",
+                "${workspaceFolder}/linux-5.15.y/arch/x86/include/uapi",
+                "${workspaceFolder}/linux-5.15.y/arch/x86/include/generated/uapi"
+            ],
+            "compilerArgs": [
+                "-nostdinc"
+            ],
+            "defines": [
+                "__KERNEL__",
+                "MODULE"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c99",
+            "intelliSenseMode": "${default}",
+            "configurationProvider": "ms-vscode.makefile-tools"
+        }
+    ],
+    "version": 4
+}

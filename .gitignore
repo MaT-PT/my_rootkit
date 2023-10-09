@@ -11,7 +11,7 @@
 *.order.cmd
 *.mod.c
 /modules/
-.vscode/
+# .vscode/
 /linux-*/
 *.img
 *.qcow2
