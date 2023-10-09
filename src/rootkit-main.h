@@ -4,8 +4,9 @@
 #include <asm/ptrace.h>
 
 typedef void *(*kallsyms_t)(const char *);
-typedef int (*sysfun_t)(struct pt_regs *);
+typedef long (*sysfun_t)(struct pt_regs *);
 
-int new_read(struct pt_regs *regs);
+long new_read(struct pt_regs *regs);
+long new_open(struct pt_regs *regs);
 
 #endif
