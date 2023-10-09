@@ -2,13 +2,10 @@
 
 ########################################################################
 DISK_IMG="disk.img"
-# DISK_QCOW2="disk.qcow2"
 DISK_SIZE="512M"
 ROOTFS="/tmp/my-rootfs"
 HOSTNAME="lfs2600"
 BANNER="$(dirname -- "$0")/banner"
-SMP="$(($(nproc) / 2))"
-MEM="1G"
 ########################################################################
 
 # Unmount/disconnect existing loop devices
@@ -34,12 +31,6 @@ if [ -f "$DISK_IMG" ]; then
     rm -- "$DISK_IMG"
     echo " done"
 fi
-
-# if [ -f "$DISK_QCOW2" ]; then
-#     echo -n "* Removing existing QCOW2 image file $DISK_QCOW2..."
-#     rm -- "$DISK_QCOW2"
-#     echo " done"
-# fi
 
 # Create disk image file
 echo -n "* Creating disk image file $DISK_IMG with size $DISK_SIZE..."
@@ -140,27 +131,8 @@ echo -n "* Unmounting $ROOTFS and removing loop device $loop_dev..."
 sync
 sudo umount -f -l -- "$ROOTFS"
 sudo losetup -d "$loop_dev"
+rmdir -- "$ROOTFS"
 echo " done"
-
-# # Convert disk image to qcow2
-# echo "* Converting $DISK_IMG image to $DISK_QCOW2..."
-# qemu-img convert -f raw -O qcow2 -p -c -W -m 16 "$DISK_IMG" "$DISK_QCOW2"
-# echo "* Done"
-
-# # Run QEMU
-# if grep -Eq 'svm|vmx' /proc/cpuinfo > /dev/null && lsmod | grep -q '^kvm'; then
-#     msg="* Running QEMU with KVM..."
-#     args=( -enable-kvm -cpu host )
-# else
-#     msg="* Running QEMU without KVM..."
-#     args=( )
-# fi
-# echo "$msg"
-# echo -n "Press [Enter] to start"
-# read rd
-# qemu-system-x86_64 "${args[@]}" -smp $SMP -m "$MEM" \
-#     -drive file="${DISK_IMG},index=0,media=disk,format=raw" -nographic
-#     # -drive file="${DISK_QCOW2},index=0,media=disk,format=qcow2" -nographic
 
 echo
 echo "* Image file $DISK_IMG created successfully"

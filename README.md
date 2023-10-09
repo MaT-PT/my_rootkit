@@ -29,4 +29,7 @@ make clean
 # Update QCOW2 image with new kernel/modules/test files
 # Also runs QEMU after update
 ./scripts/update-kernel-qcow2.sh
+
+# Just run QEMU with disk.img file
+./scripts/start-qemu.sh
 ```

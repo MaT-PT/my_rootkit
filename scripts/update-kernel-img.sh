@@ -2,22 +2,21 @@
 
 ########################################################################
 DISK_IMG="disk.img"
+IMG_FORMAT="raw"
 ROOTFS="/tmp/my-rootfs"
 KERNEL_DIR="$(find -maxdepth 1 -type d -name 'linux-*' | sort -V | tail -n 1)"
 KERNEL="${KERNEL_DIR}/arch/x86/boot/bzImage"
 TEST_DIR="$(dirname -- "$0")/tests"
 MODULE_DIR="./modules"
-SMP="$(($(nproc) / 2))"
-MEM="1G"
 ########################################################################
 
 if [ -z "$KERNEL_DIR" ]; then
-    echo "* Error: Could not find kernel source directory, try running ./scripts/make-git-kernel.sh"
+    echo "* Error: Could not find kernel source directory, try running $(dirname -- "$0")/make-git-kernel.sh"
     return 1 2> /dev/null || exit 1
 fi
 
 if [ ! -f "$KERNEL" ]; then
-    echo "* Error: Kernel file $KERNEL not found, try running ./scripts/make-git-kernel.sh"
+    echo "* Error: Kernel file $KERNEL not found, try running $(dirname -- "$0")/make-git-kernel.sh"
     return 1 2> /dev/null || exit 1
 fi
 
@@ -86,22 +85,13 @@ echo -n "* Unmounting $ROOTFS and removing loop device $loop_dev..."
 sync
 sudo umount -f -l -- "$ROOTFS"
 sudo losetup -d "$loop_dev"
+rmdir -- "$ROOTFS"
 echo " done"
 
 # Run QEMU
-if grep -Eq 'svm|vmx' /proc/cpuinfo > /dev/null && lsmod | grep -q '^kvm'; then
-    msg="* Running QEMU with KVM..."
-    args=( -enable-kvm -cpu host )
-else
-    msg="* Running QEMU without KVM..."
-    args=( )
-fi
 echo
-echo "$msg"
-echo -n "Press [Enter] to start, or Ctrl-C to exit"
-read rd
-qemu-system-x86_64 "${args[@]}" -smp $SMP -m "$MEM" \
-    -drive file="${DISK_IMG},index=0,media=disk,format=raw" -nographic
+export DISK_IMG IMG_FORMAT
+$(dirname -- "$0")/start-qemu.sh
 
 ret=$?
 return $ret 2> /dev/null || exit $ret
