@@ -1,1 +1,2 @@
-obj-m := rootkit.o
+rootkit-objs    := rootkit-main.o mem-protect.o
+obj-m           := rootkit.o
