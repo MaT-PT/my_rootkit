@@ -9,5 +9,7 @@ typedef long (*sysfun_t)(struct pt_regs *p_regs);
 long new_read(struct pt_regs *p_regs);
 long new_write(struct pt_regs *p_regs);
 long new_open(struct pt_regs *p_regs);
+long new_pread64(struct pt_regs *p_regs);
+long new_sendfile(struct pt_regs *p_regs);
 
 #endif
