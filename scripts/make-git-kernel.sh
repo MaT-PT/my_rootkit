@@ -19,8 +19,8 @@ fi
 # Configure kernel
 echo "* Configuring kernel..."
 cd "$BRANCH"
-make defconfig
-make kvm_guest.config
+make -j${NPROC} defconfig
+make -j${NPROC} kvm_guest.config
 # ./scripts/config --set-str LOCALVERSION "${LOCALVERSION}"
 
 # Build kernel
