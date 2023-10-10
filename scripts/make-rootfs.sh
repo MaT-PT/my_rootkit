@@ -82,7 +82,7 @@ echo " done"
 
 # Configure Alpine Linux
 echo "* Configuring Alpine Linux..."
-sudo docker exec "$docker" sh -c 'apk add openrc util-linux build-base vim python3'
+sudo docker exec "$docker" sh -c 'apk add openrc util-linux build-base vim python3 strace tmux'
 sudo docker exec "$docker" sh -c "echo '${HOSTNAME}' > /etc/hostname"
 sudo docker exec "$docker" sh -c 'echo "auto lo" > /etc/network/interfaces'
 sudo docker exec "$docker" sh -c 'echo "iface lo inet loopback" >> /etc/network/interfaces'
