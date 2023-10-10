@@ -27,34 +27,41 @@ if [ ! -f "$DISK_IMG" ]; then
     echo "* Error: Disk image file $DISK_IMG not found"
     return 1 2> /dev/null || exit 1
 fi
-
-# Create loop device
-echo "* Creating loop device..."
-while true; do
-    loop_dev=$(losetup -l | grep -- "$DISK_IMG" | cut -d ' ' -f 1 | head -n 1)
-    if [ -n "$loop_dev" ]; then
-        sudo umount -f -l -- "$ROOTFS" 2> /dev/null
-        echo -n "  * Removing existing loop device $loop_dev..."
-        if sudo losetup -d "$loop_dev"; then
-            echo " done"
-        else
-            echo
-            echo "  * Error: Failed to remove loop device $loop_dev"
-            return 1 2> /dev/null || exit 1
-        fi
+#
+# Unmount/disconnect existing loop devices
+if sudo umount --force --lazy --detach-loop -- "$ROOTFS" 2> /dev/null; then
+    echo "* Unmounted $ROOTFS"
+fi
+for loop_dev in $(losetup --associated "$DISK_IMG" | cut -d ':' -f 1); do
+    sudo umount --quiet --force --lazy --detach-loop -- "${loop_dev}p1"
+    echo -n "* Removing existing loop device $loop_dev..."
+    if sudo losetup --detach "$loop_dev"; then
+        echo " done"
     else
-        break
+        ret=$?
+        echo
+        echo "* Error: Failed to remove loop device $loop_dev"
+        return $ret 2> /dev/null || exit $ret
     fi
 done
 
+# Create loop device
+echo "* Creating loop device..."
 sudo losetup -Pf "$DISK_IMG"
-loop_dev=$(losetup -l | grep -- "$DISK_IMG" | cut -d ' ' -f 1 | head -n 1)
-if [ -z "$loop_dev" ]; then
-    echo
-    echo "Error: Failed to create loop device"
-    return 1 2> /dev/null || exit 1
+loop_dev="$(sudo losetup --partscan --find --nooverlap --show "$DISK_IMG")"
+ret=$?
+if [ $ret -ne 0 -o -z "$loop_dev" ]; then
+    echo "* Error: Failed to create loop device"
+    if [ $ret -eq 0 ]; then
+        ret=1
+    fi
+    return $ret 2> /dev/null || exit $ret
 fi
 loop_part="${loop_dev}p1"
+if [ ! -b "$loop_part" ]; then
+    echo "* Error: partition $loop_part does not exist"
+    return 1 2> /dev/null || exit 1
+fi
 echo "  * Created loop device: $loop_dev, partition: $loop_part"
 
 # Mount partition
@@ -83,8 +90,8 @@ echo "* Done"
 # Cleanup
 echo -n "* Unmounting $ROOTFS and removing loop device $loop_dev..."
 sync
-sudo umount -f -l -- "$ROOTFS"
-sudo losetup -d "$loop_dev"
+sudo umount --force --lazy -- "$ROOTFS"
+sudo losetup --detach "$loop_dev"
 rmdir -- "$ROOTFS"
 echo " done"
 

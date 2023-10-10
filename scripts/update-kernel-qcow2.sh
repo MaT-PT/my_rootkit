@@ -32,7 +32,7 @@ fi
 # Mount partition
 echo -n "* Mounting partition $PARTITION from $DISK_IMG on $ROOTFS..."
 mkdir -p -- "$ROOTFS"
-sudo guestmount -a "$DISK_IMG" -m "$PARTITION" "$ROOTFS"
+sudo guestmount --add "$DISK_IMG" --mount "$PARTITION" "$ROOTFS"
 echo " done"
 
 # Update kernel and test files
