@@ -6,6 +6,7 @@ DISK_SIZE="512M"
 ROOTFS="/tmp/my-rootfs"
 HOSTNAME="lfs2600"
 BANNER="$(dirname -- "$0")/banner"
+PATH="$PATH:/sbin:/usr/sbin"
 ########################################################################
 
 # Unmount/disconnect existing loop devices
@@ -39,7 +40,7 @@ echo " done"
 
 # Create partition table
 echo -n "* Creating MSDOS partition table..."
-/sbin/parted -s "$DISK_IMG" mktable msdos
+parted -s "$DISK_IMG" mktable msdos
 echo " done"
 
 # Create partition
