@@ -4,6 +4,7 @@
 #include <asm/ptrace.h>
 #include <linux/linkage.h>
 
+
 asmlinkage long new_read(struct pt_regs *p_regs);
 asmlinkage long new_write(struct pt_regs *p_regs);
 asmlinkage long new_open(struct pt_regs *p_regs);
