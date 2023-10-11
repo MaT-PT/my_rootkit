@@ -11,7 +11,8 @@
 *.order.cmd
 *.mod.c
 /modules/
-# .vscode/
+.vscode/
+! .vscode/c_cpp_properties.json
 /linux-*/
 *.img
 *.qcow2
