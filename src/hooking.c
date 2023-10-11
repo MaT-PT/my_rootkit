@@ -4,6 +4,7 @@
 #include <asm/processor-flags.h>
 #include <asm/special_insns.h>
 #include <linux/kprobes.h>
+#include <linux/printk.h>
 
 
 static kallsyms_t lookup_name;
