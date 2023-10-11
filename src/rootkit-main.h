@@ -4,6 +4,9 @@
 #include <asm/ptrace.h>
 #include <linux/linkage.h>
 
+#define KALLSYMS_NAME "kallsyms_lookup_name"
+#define SYS_CALL_TABLE_NAME "sys_call_table"
+
 typedef void *(*kallsyms_t)(const char *s_name);
 typedef asmlinkage long (*sysfun_t)(struct pt_regs *p_regs);
 
