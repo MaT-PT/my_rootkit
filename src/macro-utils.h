@@ -89,7 +89,6 @@
 #define SYSCALL_HOOK_HANDLERx(x, _syscall_name, _orig_sysfun, _reg_var, ...)                     \
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
                                                 __MAP(x, __SC_DECL, __VA_ARGS__));               \
-    /*__attribute__((alias(__stringify(HOOK_HANDLER_NAME(_syscall_name)))));*/                   \
     asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                  \
     {                                                                                            \
         __DECL_REGx(x, _reg_var, __VA_ARGS__) return __do_##_syscall_name##_hook(                \
@@ -97,6 +96,14 @@
     }                                                                                            \
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
                                                 __MAP(x, __SC_DECL, __VA_ARGS__))
+
+#define SYSCALL_HOOK_HANDLER0(_syscall_name, _orig_sysfun, _reg_var)                              \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var); \
+    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                   \
+    {                                                                                             \
+        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var);                 \
+    }                                                                                             \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var)
 
 #define SYSCALL_HOOK_HANDLER1(...) SYSCALL_HOOK_HANDLERx(1, __VA_ARGS__)
 #define SYSCALL_HOOK_HANDLER2(...) SYSCALL_HOOK_HANDLERx(2, __VA_ARGS__)

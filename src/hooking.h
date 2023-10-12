@@ -39,8 +39,8 @@ typedef struct hook_tag {
 } hook_t;
 
 int init_hooking(void);
-sysfun_t get_syscall_entry(size_t sz_syscall_nr);
-void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
+inline sysfun_t get_syscall_entry(size_t sz_syscall_nr);
+inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
 int hook_syscall(hook_t *p_hook);
 void unhook_syscall(const hook_t *p_hook);
 int hook_syscalls(hook_t p_hooks[], size_t sz_count);

