@@ -3,7 +3,7 @@
 ## Description
 Projet de rootkit Linux pour l’École 2600.
 
-## Dependancies
+## Dependencies
 ```bash
 # Debian-like
 sudo apt install build-essential git qemu-system-x86 parted libguestfs-tools flex libelf-dev docker.io grub-pc-bin
