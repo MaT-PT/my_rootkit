@@ -92,9 +92,8 @@
     /*__attribute__((alias(__stringify(HOOK_HANDLER_NAME(_syscall_name)))));*/                   \
     asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                  \
     {                                                                                            \
-        __DECL_REGx(x, _reg_var, __VA_ARGS__);                                                   \
-        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var,                 \
-                                           __MAP(x, __SC_ARGS, __VA_ARGS__));                    \
+        __DECL_REGx(x, _reg_var, __VA_ARGS__) return __do_##_syscall_name##_hook(                \
+            ORIG_SYSFUN(_syscall_name), _reg_var, __MAP(x, __SC_ARGS, __VA_ARGS__));             \
     }                                                                                            \
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
                                                 __MAP(x, __SC_DECL, __VA_ARGS__))
