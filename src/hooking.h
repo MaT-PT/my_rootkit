@@ -19,7 +19,10 @@
 #define SYSCALL_HOOK(_syscall_name) \
     NEW_HOOK(__NR_##_syscall_name, HOOK_HANDLER_NAME(_syscall_name), ORIG_SYSFUN(_syscall_name))
 
-#define SYSCALL_HOOKS(...) __MAPX_LIST(SYSCALL_HOOK, __VA_ARGS__)
+#define SYSCALL_HOOKS(...)                     \
+    {                                          \
+        __MAPX_LIST(SYSCALL_HOOK, __VA_ARGS__) \
+    }
 
 typedef void *(*kallsyms_t)(const char *s_name);
 typedef long (*sysfun_t)(struct pt_regs *p_regs);
