@@ -6,7 +6,7 @@
 #include <linux/syscalls.h>
 
 
-// MAP macro taken from https://github.com/swansontec/map-macro
+// MAP macros taken from https://github.com/swansontec/map-macro (public domain).
 
 #define __MAPX_EVAL0(...) __VA_ARGS__
 #define __MAPX_EVAL1(...) __MAPX_EVAL0(__MAPX_EVAL0(__MAPX_EVAL0(__VA_ARGS__)))
@@ -52,37 +52,39 @@
 // Macros for syscall hooking
 
 #define __DECL_REG(_reg_var, _reg_name, _var_type, _var_name, ...) \
-    _var_type _var_name = ((_var_type)_reg_var->_reg_name);
+    _var_type _var_name = ((_var_type)_reg_var->_reg_name)
 
-#define __DECL_REG1(_reg_var, _var_type1, _var_name1) \
-    __DECL_REG(_reg_var, di, _var_type1, _var_name1)
+#define __DECL_REG0(_reg_var)
 
-#define __DECL_REG2(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2) \
-    __DECL_REG1(_reg_var, _var_type1, _var_name1)                             \
-    __DECL_REG(_reg_var, si, _var_type2, _var_name2)
+#define __DECL_REG1(_reg_var, _var1_type, _var1_name) \
+    __DECL_REG(_reg_var, di, _var1_type, _var1_name)
 
-#define __DECL_REG3(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3, \
-                    _var_name3)                                                           \
-    __DECL_REG2(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2)                 \
-    __DECL_REG(_reg_var, dx, _var_type3, _var_name3)
+#define __DECL_REG2(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name) \
+    __DECL_REG1(_reg_var, _var1_type, _var1_name);                            \
+    __DECL_REG(_reg_var, si, _var2_type, _var2_name)
 
-#define __DECL_REG4(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3,         \
-                    _var_name3, _var_type4, _var_name4)                                           \
-    __DECL_REG3(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3, _var_name3) \
-    __DECL_REG(_reg_var, r10, _var_type4, _var_name4)
+#define __DECL_REG3(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type, \
+                    _var3_name)                                                           \
+    __DECL_REG2(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name);                \
+    __DECL_REG(_reg_var, dx, _var3_type, _var3_name)
 
-#define __DECL_REG5(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3,         \
-                    _var_name3, _var_type4, _var_name4, _var_type5, _var_name5)                   \
-    __DECL_REG4(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3, _var_name3, \
-                _var_type4, _var_name4)                                                           \
-    __DECL_REG(_reg_var, r8, _var_type5, _var_name5)
+#define __DECL_REG4(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type,          \
+                    _var3_name, _var4_type, _var4_name)                                            \
+    __DECL_REG3(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type, _var3_name); \
+    __DECL_REG(_reg_var, r10, _var4_type, _var4_name)
 
-#define __DECL_REG6(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3,         \
-                    _var_name3, _var_type4, _var_name4, _var_type5, _var_name5, _var_type6,       \
-                    _var_name6)                                                                   \
-    __DECL_REG5(_reg_var, _var_type1, _var_name1, _var_type2, _var_name2, _var_type3, _var_name3, \
-                _var_type4, _var_name4, _var_type5, _var_name5)                                   \
-    __DECL_REG(_reg_var, r9, _var_type6, _var_name6)
+#define __DECL_REG5(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type,         \
+                    _var3_name, _var4_type, _var4_name, _var5_type, _var5_name)                   \
+    __DECL_REG4(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type, _var3_name, \
+                _var4_type, _var4_name);                                                          \
+    __DECL_REG(_reg_var, r8, _var5_type, _var5_name)
+
+#define __DECL_REG6(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type,         \
+                    _var3_name, _var4_type, _var4_name, _var5_type, _var5_name, _var6_type,       \
+                    _var6_name)                                                                   \
+    __DECL_REG5(_reg_var, _var1_type, _var1_name, _var2_type, _var2_name, _var3_type, _var3_name, \
+                _var4_type, _var4_name, _var5_type, _var5_name);                                  \
+    __DECL_REG(_reg_var, r9, _var6_type, _var6_name)
 
 #define __DECL_REGx(x, _reg_var, ...) __DECL_REG##x(_reg_var, __VA_ARGS__)
 
@@ -91,8 +93,9 @@
                                                 __MAP(x, __SC_DECL, __VA_ARGS__));               \
     asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                  \
     {                                                                                            \
-        __DECL_REGx(x, _reg_var, __VA_ARGS__) return __do_##_syscall_name##_hook(                \
-            ORIG_SYSFUN(_syscall_name), _reg_var, __MAP(x, __SC_ARGS, __VA_ARGS__));             \
+        __DECL_REGx(x, _reg_var, __VA_ARGS__);                                                   \
+        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var,                 \
+                                           __MAP(x, __SC_ARGS, __VA_ARGS__));                    \
     }                                                                                            \
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
                                                 __MAP(x, __SC_DECL, __VA_ARGS__))
