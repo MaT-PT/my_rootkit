@@ -95,13 +95,15 @@ sudo docker exec "$docker" sh -c 'echo ttyS0 > /etc/securetty'
 sudo docker exec "$docker" sh -c 'rc-update add agetty.ttyS0 default'
 sudo docker exec "$docker" sh -c 'rc-update add root default'
 sudo docker exec "$docker" sh -c 'echo "root:root" | chpasswd'
+sudo docker exec "$docker" sh -c 'mkdir -p /home'
+sudo docker exec "$docker" sh -c 'adduser -D -g "Regular User" user'
 sudo docker exec "$docker" sh -c 'rc-update add devfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add procfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add sysfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add networking boot'
 
 echo -n "* Copying file system..."
-sudo docker exec "$docker" sh -c 'for d in bin etc lib root sbin usr; do tar c -C / "$d" | tar x -C /my-rootfs; done'
+sudo docker exec "$docker" sh -c 'for d in bin etc home lib root sbin usr; do tar c -C / "$d" | tar x -C /my-rootfs; done'
 sudo docker exec "$docker" sh -c 'for dir in dev proc run sys var; do mkdir /my-rootfs/${dir}; done'
 cat -- "$BANNER" | sudo tee -a -- "${ROOTFS}/etc/issue" > /dev/null
 echo " done"
