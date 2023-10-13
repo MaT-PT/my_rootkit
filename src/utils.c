@@ -1,6 +1,8 @@
 #include "utils.h"
 
 #include <linux/cred.h>
+#include <linux/printk.h>
+
 
 #define ROOT_UID 0 // The root user ID
 #define ROOT_GID 0 // The root group ID
