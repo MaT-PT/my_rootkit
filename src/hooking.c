@@ -25,8 +25,8 @@ static inline void cr0_write(unsigned long val)
  */
 static inline unsigned long unprotect_memory(void)
 {
-    unsigned long ul_orig_cr0;
-    unsigned long ul_new_cr0;
+    unsigned long ul_orig_cr0 = 0;
+    unsigned long ul_new_cr0  = 0;
 
     ul_orig_cr0 = native_read_cr0();           // in special_insns.h
     ul_new_cr0  = ul_orig_cr0 & ~(X86_CR0_WP); // in processor-flags.h
@@ -46,7 +46,7 @@ static inline void protect_memory(unsigned long ul_orig_cr0)
 
 int init_hooking(void)
 {
-    int i_err;
+    int i_err = 0;
 
     // Declare what we need to find
     struct kprobe probe = {
@@ -90,8 +90,8 @@ inline sysfun_t get_syscall_entry(size_t sz_syscall_nr)
 
 inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
 {
-    unsigned long ul_orig_cr0;
-    ul_orig_cr0 = unprotect_memory();
+    unsigned long ul_orig_cr0 = 0;
+    ul_orig_cr0               = unprotect_memory();
 
     p_syscall_table[sz_syscall_nr] = (uint64_t)new_sysfun;
 
@@ -117,8 +117,8 @@ void unhook_syscall(const hook_t *p_hook)
 
 int hook_syscalls(hook_t p_hooks[], size_t sz_count)
 {
-    int i_err;
-    size_t i;
+    int i_err = 0;
+    size_t i  = 0;
 
     for (i = 0; i < sz_count; ++i) {
         i_err = hook_syscall(&p_hooks[i]);
@@ -140,7 +140,7 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count)
 
 void unhook_syscalls(const hook_t p_hooks[], size_t sz_count)
 {
-    size_t i;
+    size_t i = 0;
     for (i = 0; i < sz_count; ++i) {
         unhook_syscall(&p_hooks[i]);
     }

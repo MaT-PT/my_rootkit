@@ -18,7 +18,7 @@ AlignConsecutiveMacros: AcrossComments
 AlignOperands: true
 AlignTrailingComments:
   Kind: Always
-  OverEmptyLines: 1
+  OverEmptyLines: 0
 AllowAllParametersOfDeclarationOnNextLine: false
 AllowShortBlocksOnASingleLine: false
 AllowShortCaseLabelsOnASingleLine: false

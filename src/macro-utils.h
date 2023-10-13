@@ -39,12 +39,12 @@
     f(x) __MAPX_LIST_NEXT(peek, __MAPX_LIST0)(f, peek, __VA_ARGS__)
 
 /**
- * Applies the function macro `f` to each of the remaining parameters.
+ * Applies the function macro `f` to each of the remaining arguments.
  */
 #define __MAPX(f, ...) __MAPX_EVAL(__MAPX1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
 
 /**
- * Applies the function macro `f` to each of the remaining parameters and
+ * Applies the function macro `f` to each of the remaining arguments and
  * inserts commas between the results.
  */
 #define __MAPX_LIST(f, ...) __MAPX_EVAL(__MAPX_LIST1(f, __VA_ARGS__, ()()(), ()()(), ()()(), 0))
@@ -106,13 +106,13 @@
 #define __DECL_REGx(x, _reg_var, ...) __DECL_REG##x(_reg_var, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with `x` arguments.
+ * Creates a syscall hook handler function for the given syscall with `x` parameters.
  *
- * @param x             The number of arguments (1 <= `x` <= 6)
+ * @param x             The number of parameters (1 <= `x` <= 6)
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLERx(x, _syscall_name, _orig_sysfun, _reg_var, ...)                     \
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
@@ -127,7 +127,7 @@
                                                 __MAP(x, __SC_DECL, __VA_ARGS__))
 
 /**
- * Creates a syscall hook handler function for the given syscall with no arguments.
+ * Creates a syscall hook handler function for the given syscall with no parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
@@ -142,62 +142,62 @@
     asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 1 argument.
+ * Creates a syscall hook handler function for the given syscall with 1 parameter.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument type and name
+ * @param ...           The parameter type and name
  */
 #define SYSCALL_HOOK_HANDLER1(...) SYSCALL_HOOK_HANDLERx(1, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 2 arguments.
+ * Creates a syscall hook handler function for the given syscall with 2 parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLER2(...) SYSCALL_HOOK_HANDLERx(2, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 3 arguments.
+ * Creates a syscall hook handler function for the given syscall with 3 parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLER3(...) SYSCALL_HOOK_HANDLERx(3, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 4 arguments.
+ * Creates a syscall hook handler function for the given syscall with 4 parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLER4(...) SYSCALL_HOOK_HANDLERx(4, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 5 arguments.
+ * Creates a syscall hook handler function for the given syscall with 5 parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLER5(...) SYSCALL_HOOK_HANDLERx(5, __VA_ARGS__)
 
 /**
- * Creates a syscall hook handler function for the given syscall with 6 arguments.
+ * Creates a syscall hook handler function for the given syscall with 6 parameters.
  *
  * @param _syscall_name The syscall name
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
- * @param ...           The argument types and names
+ * @param ...           The parameter types and names
  */
 #define SYSCALL_HOOK_HANDLER6(...) SYSCALL_HOOK_HANDLERx(6, __VA_ARGS__)
 
