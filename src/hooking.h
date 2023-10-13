@@ -25,6 +25,20 @@
     }
 
 /**
+ * Creates a new `signal_handler_t` structure with the given PID, signal number,
+ * and signal handler function.
+ *
+ * @param _pid         The process ID (< 0 for any PID)
+ * @param _sig         The signal number (< 0 for any signal)
+ * @param _sig_handler The signal handler function
+ * @return The new signal_handler_t structure
+ */
+#define NEW_SIGNAL_HANDLER(_pid, _sig, _sig_handler)                        \
+    {                                                                       \
+        .i32_pid = (_pid), .i32_sig = (_sig), .sig_handler = (_sig_handler) \
+    }
+
+/**
  * Gets the original syscall function pointer for the given syscall
  * from the `p_orig_sysfuns` array.
  *
@@ -78,6 +92,15 @@ typedef struct hook_tag {
     const sysfun_t new_sysfun;  // The new syscall function
     sysfun_t *p_orig_sysfun;    // A pointer to the original syscall function
 } hook_t;
+
+/**
+ * Structure that represents a signal handler.
+ */
+typedef struct signal_handler_tag {
+    const int i32_pid;                                     // The process ID (< 0 for any PID)
+    const int i32_sig;                                     // The signal number (< 0 for any signal)
+    void (*const sig_handler)(pid_t i32_pid, int i32_sig); // The signal handler function
+} signal_handler_t;
 
 /**
  * Initializes the hooking module.

