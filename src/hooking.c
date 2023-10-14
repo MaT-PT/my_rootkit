@@ -90,8 +90,7 @@ inline sysfun_t get_syscall_entry(size_t sz_syscall_nr)
 
 inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
 {
-    unsigned long ul_orig_cr0 = 0;
-    ul_orig_cr0               = unprotect_memory();
+    unsigned long ul_orig_cr0 = unprotect_memory();
 
     p_syscall_table[sz_syscall_nr] = (uint64_t)new_sysfun;
 
@@ -118,7 +117,7 @@ void unhook_syscall(const hook_t *p_hook)
 int hook_syscalls(hook_t p_hooks[], size_t sz_count)
 {
     int i_err = 0;
-    size_t i  = 0;
+    size_t i;
 
     for (i = 0; i < sz_count; ++i) {
         i_err = hook_syscall(&p_hooks[i]);
@@ -140,7 +139,7 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count)
 
 void unhook_syscalls(const hook_t p_hooks[], size_t sz_count)
 {
-    size_t i = 0;
+    size_t i;
     for (i = 0; i < sz_count; ++i) {
         unhook_syscall(&p_hooks[i]);
     }

