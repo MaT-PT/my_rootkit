@@ -1,5 +1,6 @@
 #include "files.h"
 
+#include "macro-utils.h"
 #include <asm/current.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
@@ -16,14 +17,14 @@
 const file_t *fd_get_file(int d_fd)
 {
     const file_t *p_file = NULL;           // File structure
-    files_t *p_files     = current->files; // Pointer to the current task files
+    files_t *p_files     = current->files; // Reference to the current task files
 
-    if (unlikely(p_files == NULL)) {
+    IF_U (p_files == NULL) {
         // If the current task has no files, return an error (this should not happen)
         return ERR_PTR(-ENOENT);
     }
 
-    if (unlikely(d_fd < 0 || d_fd >= p_files->fdt->max_fds)) {
+    IF_U (d_fd < 0 || d_fd >= p_files->fdt->max_fds) {
         // If the file descriptor is invalid, return an error
         return ERR_PTR(-EBADF);
     }
@@ -32,7 +33,7 @@ const file_t *fd_get_file(int d_fd)
     p_file = lookup_fd_rcu(d_fd);
     spin_unlock(&p_files->file_lock);
 
-    if (unlikely(p_file == NULL)) {
+    IF_U (p_file == NULL) {
         return ERR_PTR(-ENOENT);
     }
 
@@ -48,7 +49,7 @@ const char *fd_get_pathname(int d_fd)
     const path_t *p_path       = NULL; // Path structure
 
     p_file = fd_get_file(d_fd);
-    if (unlikely(IS_ERR(p_file))) {
+    IF_U (IS_ERR(p_file)) {
         return (char *)p_file;
     }
 
@@ -57,7 +58,7 @@ const char *fd_get_pathname(int d_fd)
 
     p_tmp = (char *)__get_free_page(GFP_KERNEL);
 
-    if (unlikely(p_tmp == NULL)) {
+    IF_U (p_tmp == NULL) {
         path_put(p_path);
         return ERR_PTR(-ENOMEM);
     }
@@ -65,7 +66,7 @@ const char *fd_get_pathname(int d_fd)
     s_pathname = d_path(p_path, p_tmp, PAGE_SIZE);
     path_put(p_path);
 
-    if (unlikely(IS_ERR(s_pathname))) {
+    IF_U (IS_ERR(s_pathname)) {
         free_page((unsigned long)p_tmp);
         return s_pathname;
     }

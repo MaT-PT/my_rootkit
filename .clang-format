@@ -511,6 +511,10 @@ ForEachMacros:
   - 'xbc_node_for_each_key_value'
   - 'zorro_for_each_dev'
 
+IfMacros:
+  - 'IF_U'
+  - 'IF_L'
+
 IncludeBlocks: Regroup # Unknown to clang-format-5.0
 IncludeCategories:
   - Regex: '.*'

