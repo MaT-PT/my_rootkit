@@ -1,8 +1,8 @@
-#include "rootkit-main.h"
+#include "rootkit_main.h"
 
 #include "files.h"
 #include "hooking.h"
-#include "macro-utils.h"
+#include "macro_utils.h"
 #include "utils.h"
 #include <linux/dirent.h>
 #include <linux/err.h>

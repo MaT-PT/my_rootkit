@@ -1,6 +1,6 @@
 #include "hooking.h"
 
-#include "macro-utils.h"
+#include "macro_utils.h"
 #include <asm-generic/errno-base.h>
 #include <asm/processor-flags.h>
 #include <asm/special_insns.h>

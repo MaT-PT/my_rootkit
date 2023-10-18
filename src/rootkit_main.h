@@ -2,7 +2,7 @@
 #define _ROOTKIT_ROOTKIT_MAIN_H_
 
 #include "hooking.h"
-#include "macro-utils.h"
+#include "macro_utils.h"
 #include "utils.h"
 
 #define P_SYSCALL_HOOKS  (p_syscall_hooks)
