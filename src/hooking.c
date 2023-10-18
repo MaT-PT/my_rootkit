@@ -83,12 +83,12 @@ int init_hooking(void)
     return 0;
 }
 
-inline sysfun_t get_syscall_entry(size_t sz_syscall_nr)
+sysfun_t get_syscall_entry(size_t sz_syscall_nr)
 {
     return (sysfun_t)p_syscall_table[sz_syscall_nr];
 }
 
-inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
+void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
 {
     unsigned long ul_orig_cr0 = unprotect_memory();
 

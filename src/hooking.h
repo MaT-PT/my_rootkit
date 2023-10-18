@@ -114,7 +114,7 @@ int init_hooking(void);
  * @param sz_syscall_nr The syscall number
  * @return The function pointer of the syscall entry
  */
-inline sysfun_t get_syscall_entry(size_t sz_syscall_nr);
+sysfun_t get_syscall_entry(size_t sz_syscall_nr);
 
 /**
  * Sets the function pointer of the syscall entry for the given syscall number.
@@ -122,7 +122,7 @@ inline sysfun_t get_syscall_entry(size_t sz_syscall_nr);
  * @param sz_syscall_nr The syscall number
  * @param new_sysfun    The new syscall function pointer
  */
-inline void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
+void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
 
 /**
  * Hooks the given syscall.
