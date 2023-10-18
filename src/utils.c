@@ -1,6 +1,6 @@
-#include "utils.h"
+#include "inc/utils.h"
 
-#include "macro_utils.h"
+#include "inc/macro_utils.h"
 #include <linux/cred.h>
 #include <linux/printk.h>
 

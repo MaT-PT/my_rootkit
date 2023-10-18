@@ -1,6 +1,6 @@
-#include "files.h"
+#include "inc/files.h"
 
-#include "macro_utils.h"
+#include "inc/macro_utils.h"
 #include <asm/current.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
