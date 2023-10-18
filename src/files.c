@@ -47,21 +47,6 @@ const char *fd_get_pathname(int d_fd)
     const file_t *p_file       = NULL; // File structure
     const path_t *p_path       = NULL; // Path structure
 
-    // Special case for STDIN/STDOUT/STDERR
-    switch (d_fd) {
-    case 0:
-        return kstrdup("STDIN", GFP_KERNEL);
-        break;
-
-    case 1:
-        return kstrdup("STDOUT", GFP_KERNEL);
-        break;
-
-    case 2:
-        return kstrdup("STDERR", GFP_KERNEL);
-        break;
-    }
-
     p_file = fd_get_file(d_fd);
     if (unlikely(IS_ERR(p_file))) {
         return (char *)p_file;
