@@ -23,7 +23,16 @@ typedef struct linux_dirent64 dirent64_t;
 
 typedef struct file file_t;
 typedef struct path path_t;
+typedef struct inode inode_t;
 typedef struct files_struct files_t;
+
+/**
+ * Gets the file structure associated with the given file descriptor.
+ *
+ * @param d_fd The file descriptor
+ * @return The file structure associated with the given file descriptor
+ */
+const file_t *fd_get_file(int d_fd);
 
 /**
  * Gets the pathname of the file associated with the given file descriptor.
@@ -32,6 +41,6 @@ typedef struct files_struct files_t;
  * @param d_fd The file descriptor
  * @return The pathname of the file associated with the given file descriptor
  */
-char *fd_get_pathname(int d_fd);
+const char *fd_get_pathname(int d_fd);
 
 #endif

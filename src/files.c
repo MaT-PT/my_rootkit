@@ -13,13 +13,9 @@
 
 // TODO: Function to check if two files are the same (same inode/device/etc.)
 
-char *fd_get_pathname(int d_fd)
+const file_t *fd_get_file(int d_fd)
 {
-    char *s_pathname     = NULL;           // Pathname of the file
-    char *s_pathname_ret = NULL;           // Pathname of the file (return value)
-    char *p_tmp          = NULL;           // Temporary buffer
-    file_t *p_file       = NULL;           // File structure
-    path_t *p_path       = NULL;           // Path structure
+    const file_t *p_file = NULL;           // File structure
     files_t *p_files     = current->files; // Pointer to the current task files
 
     if (unlikely(p_files == NULL)) {
@@ -27,10 +23,29 @@ char *fd_get_pathname(int d_fd)
         return ERR_PTR(-ENOENT);
     }
 
-    if (unlikely(d_fd < 0 || d_fd >= current->files->fdt->max_fds)) {
+    if (unlikely(d_fd < 0 || d_fd >= p_files->fdt->max_fds)) {
         // If the file descriptor is invalid, return an error
         return ERR_PTR(-EBADF);
     }
+
+    spin_lock(&p_files->file_lock); // Lock the files structure while we use it
+    p_file = lookup_fd_rcu(d_fd);
+    spin_unlock(&p_files->file_lock);
+
+    if (unlikely(p_file == NULL)) {
+        return ERR_PTR(-ENOENT);
+    }
+
+    return p_file;
+}
+
+const char *fd_get_pathname(int d_fd)
+{
+    const char *s_pathname     = NULL; // Pathname of the file
+    const char *s_pathname_ret = NULL; // Pathname of the file (return value)
+    char *p_tmp                = NULL; // Temporary buffer
+    const file_t *p_file       = NULL; // File structure
+    const path_t *p_path       = NULL; // Path structure
 
     // Special case for STDIN/STDOUT/STDERR
     switch (d_fd) {
@@ -47,16 +62,13 @@ char *fd_get_pathname(int d_fd)
         break;
     }
 
-    spin_lock(&p_files->file_lock); // Lock the files structure while we use it
-    p_file = lookup_fd_rcu(d_fd);
-    if (unlikely(p_file == NULL)) {
-        spin_unlock(&p_files->file_lock);
-        return ERR_PTR(-ENOENT);
+    p_file = fd_get_file(d_fd);
+    if (unlikely(IS_ERR(p_file))) {
+        return (char *)p_file;
     }
 
     p_path = &p_file->f_path;
     path_get(p_path); // Increment the path reference count while we use it
-    spin_unlock(&p_files->file_lock);
 
     p_tmp = (char *)__get_free_page(GFP_KERNEL);
 
@@ -73,7 +85,7 @@ char *fd_get_pathname(int d_fd)
         return s_pathname;
     }
 
-    s_pathname_ret = kstrdup(s_pathname, GFP_KERNEL);
+    s_pathname_ret = kstrdup_const(s_pathname, GFP_KERNEL);
 
     free_page((unsigned long)p_tmp);
     return s_pathname_ret;
