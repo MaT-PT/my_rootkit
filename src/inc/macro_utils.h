@@ -53,6 +53,8 @@
 
 // Macros for syscall hooking
 
+#define __SC_DECL_CONST(t, a) t const a // Wrapper for `const` declaration
+
 /**
  * Initializes a variable of the given name and type with the value from the given register.
  *
@@ -62,7 +64,7 @@
  * @param _var_name The variable name
  */
 #define __DECL_REG(_reg_var, _reg_name, _var_type, _var_name, ...) \
-    _var_type _var_name = ((_var_type)_reg_var->_reg_name)
+    _var_type const _var_name = ((_var_type)_reg_var->_reg_name)
 
 #define __DECL_REG0(_reg_var)
 
@@ -115,17 +117,19 @@
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
  * @param ...           The parameter types and names
  */
-#define SYSCALL_HOOK_HANDLERx(x, _syscall_name, _orig_sysfun, _reg_var, ...)                     \
-    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
-                                                __MAP(x, __SC_DECL, __VA_ARGS__));               \
-    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                  \
-    {                                                                                            \
-        __DECL_REGx(x, _reg_var, __VA_ARGS__);                                                   \
-        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var,                 \
-                                           __MAP(x, __SC_ARGS, __VA_ARGS__));                    \
-    }                                                                                            \
-    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var, \
-                                                __MAP(x, __SC_DECL, __VA_ARGS__))
+#define SYSCALL_HOOK_HANDLERx(x, _syscall_name, _orig_sysfun, _reg_var, ...)             \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t const _orig_sysfun,             \
+                                                struct pt_regs *const _reg_var,          \
+                                                __MAP(x, __SC_DECL_CONST, __VA_ARGS__)); \
+    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs *const _reg_var)     \
+    {                                                                                    \
+        __DECL_REGx(x, _reg_var, __VA_ARGS__);                                           \
+        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var,         \
+                                           __MAP(x, __SC_ARGS, __VA_ARGS__));            \
+    }                                                                                    \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t const _orig_sysfun,             \
+                                                struct pt_regs *const _reg_var,          \
+                                                __MAP(x, __SC_DECL_CONST, __VA_ARGS__))
 
 /**
  * Creates a syscall hook handler function for the given syscall with no parameters.
@@ -134,13 +138,15 @@
  * @param _orig_sysfun  The local variable that will hold the original syscall function pointer
  * @param _reg_var      The local variable that will hold the `struct pt_regs *` reference
  */
-#define SYSCALL_HOOK_HANDLER0(_syscall_name, _orig_sysfun, _reg_var)                              \
-    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var); \
-    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs * _reg_var)                   \
-    {                                                                                             \
-        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var);                 \
-    }                                                                                             \
-    asmlinkage long __do_##_syscall_name##_hook(sysfun_t _orig_sysfun, struct pt_regs *_reg_var)
+#define SYSCALL_HOOK_HANDLER0(_syscall_name, _orig_sysfun, _reg_var)                 \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t const _orig_sysfun,         \
+                                                struct pt_regs *const _reg_var);     \
+    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs *const _reg_var) \
+    {                                                                                \
+        return __do_##_syscall_name##_hook(ORIG_SYSFUN(_syscall_name), _reg_var);    \
+    }                                                                                \
+    asmlinkage long __do_##_syscall_name##_hook(sysfun_t const _orig_sysfun,         \
+                                                struct pt_regs *const _reg_var)
 
 /**
  * Creates a syscall hook handler function for the given syscall with 1 parameter.
@@ -209,7 +215,7 @@
  * @param _syscall_name The syscall name
  */
 #define DECLARE_HOOK_HANDLER(_syscall_name) \
-    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs *);
+    asmlinkage long HOOK_HANDLER_NAME(_syscall_name)(struct pt_regs *const);
 
 /**
  * Declares syscall hook handler functions for the given syscalls.

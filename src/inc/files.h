@@ -32,7 +32,7 @@ typedef struct files_struct files_t;
  * @param d_fd The file descriptor
  * @return The file structure associated with the given file descriptor
  */
-const file_t *fd_get_file(int d_fd);
+const file_t *fd_get_file(const int d_fd);
 
 /**
  * Gets the pathname of the file associated with the given file descriptor.
@@ -41,6 +41,6 @@ const file_t *fd_get_file(int d_fd);
  * @param d_fd The file descriptor
  * @return The pathname of the file associated with the given file descriptor
  */
-const char *fd_get_pathname(int d_fd);
+const char *fd_get_pathname(const int d_fd);
 
 #endif

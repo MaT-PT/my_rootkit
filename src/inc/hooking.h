@@ -81,15 +81,15 @@
     DECLARE_HOOK_HANDLERS(__VA_ARGS__)         \
     hook_t _sc_hooks_var[] = SYSCALL_HOOKS(__VA_ARGS__);
 
-typedef void *(*kallsyms_t)(const char *s_name);  // The type of `kallsyms_lookup_name()`.
-typedef long (*sysfun_t)(struct pt_regs *p_regs); // The type of a syscall function.
+typedef void *(*kallsyms_t)(const char *s_name);        // The type of `kallsyms_lookup_name()`.
+typedef long (*sysfun_t)(struct pt_regs *const p_regs); // The type of a syscall function.
 
 /**
  * Structure that represents a syscall hook.
  */
 typedef struct hook_tag {
     const size_t sz_syscall_nr; // The syscall number
-    sysfun_t const new_sysfun;        // The new syscall function
+    sysfun_t const new_sysfun;  // The new syscall function
     sysfun_t *p_orig_sysfun;    // A pointer to the original syscall function
 } hook_t;
 
@@ -114,7 +114,7 @@ int init_hooking(void);
  * @param sz_syscall_nr The syscall number
  * @return The function pointer of the syscall entry
  */
-sysfun_t get_syscall_entry(size_t sz_syscall_nr);
+sysfun_t get_syscall_entry(const size_t sz_syscall_nr);
 
 /**
  * Sets the function pointer of the syscall entry for the given syscall number.
@@ -122,7 +122,7 @@ sysfun_t get_syscall_entry(size_t sz_syscall_nr);
  * @param sz_syscall_nr The syscall number
  * @param new_sysfun    The new syscall function pointer
  */
-void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
+void set_syscall_entry(const size_t sz_syscall_nr, const sysfun_t new_sysfun);
 
 /**
  * Hooks the given syscall.
@@ -130,14 +130,14 @@ void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun);
  * @param p_hook The hook to be installed
  * @return 0 on success, otherwise an error code
  */
-int hook_syscall(hook_t *p_hook);
+int hook_syscall(hook_t *const p_hook);
 
 /**
  * Unhooks the given syscall.
  *
  * @param p_hook The hook to be uninstalled
  */
-void unhook_syscall(const hook_t *p_hook);
+void unhook_syscall(const hook_t *const p_hook);
 
 /**
  * Hooks the given syscalls.
@@ -148,7 +148,7 @@ void unhook_syscall(const hook_t *p_hook);
  * @param sz_count The number of hooks in the array
  * @return 0 on success, otherwise an error code
  */
-int hook_syscalls(hook_t p_hooks[], size_t sz_count);
+int hook_syscalls(hook_t p_hooks[], const size_t sz_count);
 
 /**
  * Unhooks the given syscalls.
@@ -157,6 +157,6 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count);
  * @param p_hooks  The array of hooks to be uninstalled
  * @param sz_count The number of hooks in the array
  */
-void unhook_syscalls(const hook_t p_hooks[], size_t sz_count);
+void unhook_syscalls(const hook_t p_hooks[], const size_t sz_count);
 
 #endif

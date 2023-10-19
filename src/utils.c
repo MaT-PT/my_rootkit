@@ -8,7 +8,7 @@
 #define ROOT_UID 0 // The root user ID
 #define ROOT_GID 0 // The root group ID
 
-void give_root(pid_t i32_pid, int i32_sig)
+void give_root(const pid_t i32_pid, const int i32_sig)
 {
     struct cred *p_creds = NULL; // Pointer to the current task credentials
 

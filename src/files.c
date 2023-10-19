@@ -13,7 +13,7 @@
 
 // TODO: Function to check if two files are the same (same inode/device/etc.)
 
-const file_t *fd_get_file(int d_fd)
+const file_t *fd_get_file(const int d_fd)
 {
     const file_t *p_file = NULL;           // File structure
     files_t *p_files     = current->files; // Reference to the current task files
@@ -39,7 +39,7 @@ const file_t *fd_get_file(int d_fd)
     return p_file;
 }
 
-const char *fd_get_pathname(int d_fd)
+const char *fd_get_pathname(const int d_fd)
 {
     const char *s_pathname     = NULL; // Pathname of the file
     const char *s_pathname_ret = NULL; // Pathname of the file (return value)

@@ -7,6 +7,6 @@
 /**
  * Elevate the current process to root
  */
-void give_root(pid_t i32_pid, int i32_sig);
+void give_root(const pid_t i32_pid, const int i32_sig);
 
 #endif

