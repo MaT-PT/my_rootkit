@@ -45,7 +45,7 @@
  * @param _syscall_name The syscall name
  * @return The original syscall function pointer
  */
-#define ORIG_SYSFUN(_syscall_name) p_orig_sysfuns[(__NR_##_syscall_name)]
+#define ORIG_SYSFUN(_syscall_name) p_orig_sysfuns[__NR_##_syscall_name]
 
 /**
  * Creates a new `hook_t` structure from the given syscall.
@@ -89,7 +89,7 @@ typedef long (*sysfun_t)(struct pt_regs *p_regs); // The type of a syscall funct
  */
 typedef struct hook_tag {
     const size_t sz_syscall_nr; // The syscall number
-    const sysfun_t new_sysfun;  // The new syscall function
+    sysfun_t const new_sysfun;        // The new syscall function
     sysfun_t *p_orig_sysfun;    // A pointer to the original syscall function
 } hook_t;
 

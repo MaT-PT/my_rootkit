@@ -8,7 +8,6 @@
 #include <linux/fs.h>
 #include <linux/gfp.h>
 #include <linux/path.h>
-#include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>
 
@@ -24,7 +23,7 @@ const file_t *fd_get_file(int d_fd)
         return ERR_PTR(-ENOENT);
     }
 
-    IF_U (d_fd < 0 || d_fd >= p_files->fdt->max_fds) {
+    IF_U (d_fd < 0) {
         // If the file descriptor is invalid, return an error
         return ERR_PTR(-EBADF);
     }
@@ -59,7 +58,7 @@ const char *fd_get_pathname(int d_fd)
     p_tmp = (char *)__get_free_page(GFP_KERNEL);
 
     IF_U (p_tmp == NULL) {
-        path_put(p_path);
+        path_put(p_path); // Release the path structure
         return ERR_PTR(-ENOMEM);
     }
 

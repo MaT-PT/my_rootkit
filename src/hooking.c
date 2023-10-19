@@ -9,10 +9,12 @@
 
 
 static kallsyms_t lookup_name    = NULL; // Function pointer for `kallsyms_lookup_name()`.
-static uint64_t *p_syscall_table = NULL; // Pointer to the syscall table.
+static sysfun_t *p_syscall_table = NULL; // Pointer to the syscall table.
 
 /**
  * Writes the given value to the CR0 register.
+ *
+ * @param val The value to write
  */
 static inline void cr0_write(unsigned long val)
 {
@@ -86,14 +88,14 @@ int init_hooking(void)
 
 sysfun_t get_syscall_entry(size_t sz_syscall_nr)
 {
-    return (sysfun_t)p_syscall_table[sz_syscall_nr];
+    return p_syscall_table[sz_syscall_nr];
 }
 
 void set_syscall_entry(size_t sz_syscall_nr, sysfun_t new_sysfun)
 {
     unsigned long ul_orig_cr0 = unprotect_memory();
 
-    p_syscall_table[sz_syscall_nr] = (uint64_t)new_sysfun;
+    p_syscall_table[sz_syscall_nr] = new_sysfun;
 
     protect_memory(ul_orig_cr0);
 }
