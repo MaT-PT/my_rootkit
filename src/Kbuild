@@ -1,2 +1,7 @@
-rootkit-objs    := rootkit_main.o files.o hooking.o utils.o
-obj-m           := rootkit.o
+MODULE_NAME := rootkit
+
+SRC_FILES := $(shell find '$(src)' -type f -name '*.c' -print)
+
+$(MODULE_NAME)-objs := $(shell realpath --relative-to='$(src)' -- $(SRC_FILES:.c=.o))
+
+obj-m := $(MODULE_NAME).o
