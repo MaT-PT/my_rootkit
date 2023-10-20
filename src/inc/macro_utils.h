@@ -1,6 +1,7 @@
 #ifndef _ROOTKIT_MACRO_UTILS_H_
 #define _ROOTKIT_MACRO_UTILS_H_
 
+#include "constants.h"
 #include <asm/ptrace.h>
 #include <linux/compiler.h>
 #include <linux/linkage.h>

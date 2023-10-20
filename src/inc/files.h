@@ -24,7 +24,33 @@ typedef struct linux_dirent64 dirent64_t;
 typedef struct file file_t;
 typedef struct path path_t;
 typedef struct inode inode_t;
+typedef struct dentry dentry_t;
 typedef struct files_struct files_t;
+
+/**
+ * Is the given file structure in a `proc` filesystem?
+ *
+ * @param p_file The file structure
+ * @return `true` if the given file structure is in a proc filesystem, `false` otherwise
+ */
+bool is_in_proc(const file_t *const p_file);
+
+/**
+ * Is the given file structure the root of a `proc` filesystem?
+ *
+ * @param p_file The file structure
+ * @return `true` if the given file structure is the root of a proc filesystem, `false` otherwise
+ */
+bool is_proc_root(const file_t *const p_file);
+
+/**
+ * Is the parent of the given file structure the root of a `proc` filesystem?
+ *
+ * @param p_file The file structure
+ * @return `true` if the parent of the given file structure is the root of a proc filesystem,
+ * `false` otherwise
+ */
+bool is_parent_proc_root(const file_t *const p_file);
 
 /**
  * Gets the file structure associated with the given file descriptor.
@@ -33,6 +59,15 @@ typedef struct files_struct files_t;
  * @return The file structure associated with the given file descriptor
  */
 const file_t *fd_get_file(const int d_fd);
+
+/**
+ * Gets the pathname of the given file.
+ * The returned string must be freed with `kfree`/`kvfree`.
+ *
+ * @param p_file The file
+ * @return The pathname of the given file
+ */
+const char *file_get_pathname(const file_t *const p_file);
 
 /**
  * Gets the pathname of the file associated with the given file descriptor.

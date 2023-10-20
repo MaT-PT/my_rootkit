@@ -2,10 +2,6 @@
 #define _ROOTKIT_UTILS_H_
 
 #include <linux/types.h>
-#include <linux/uidgid.h>
-
-#define ROOT_UID (uid_t)0 /* The root user ID */
-#define ROOT_GID (gid_t)0 /* The root group ID */
 
 /**
  * Sets the value of a `kuid_t` variable.

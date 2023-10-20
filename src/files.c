@@ -10,8 +10,54 @@
 #include <linux/path.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>
+#include <linux/types.h>
 
-// TODO: Function to check if two files are the same (same inode/device/etc.)
+static inline bool is_file_root(const file_t *const p_file)
+{
+    IF_U (p_file == NULL) {
+        return false;
+    }
+
+    return IS_ROOT(p_file->f_path.dentry);
+}
+
+bool is_in_proc(const file_t *const p_file)
+{
+    const inode_t *p_inode = NULL; // Inode structure
+
+    IF_U (p_file == NULL) {
+        return false;
+    }
+
+    p_inode = file_inode(p_file);
+    IF_U (p_inode == NULL) {
+        return false;
+    }
+
+    return p_inode->i_sb->s_magic == PROC_SUPER_MAGIC;
+}
+
+bool is_proc_root(const file_t *const p_file)
+{
+    IF_U (p_file == NULL) {
+        return false;
+    }
+
+    return is_file_root(p_file) && is_in_proc(p_file);
+}
+
+bool is_parent_proc_root(const file_t *const p_file)
+{
+    const dentry_t *p_parent = NULL; // Parent file structure
+
+    IF_U (p_file == NULL) {
+        return false;
+    }
+
+    p_parent = p_file->f_path.dentry->d_parent;
+
+    return IS_ROOT(p_parent) && is_in_proc(p_file);
+}
 
 const file_t *fd_get_file(const int d_fd)
 {
@@ -39,17 +85,15 @@ const file_t *fd_get_file(const int d_fd)
     return p_file;
 }
 
-const char *fd_get_pathname(const int d_fd)
+const char *file_get_pathname(const file_t *const p_file)
 {
     const char *s_pathname     = NULL; // Pathname of the file
     const char *s_pathname_ret = NULL; // Pathname of the file (return value)
-    char *p_tmp                = NULL; // Temporary buffer
-    const file_t *p_file       = NULL; // File structure
+    char *p_tmp                = NULL; // Temporary buffer for `d_path()`
     const path_t *p_path       = NULL; // Path structure
 
-    p_file = fd_get_file(d_fd);
-    IF_U (IS_ERR(p_file)) {
-        return (char *)p_file;
+    IF_U (p_file == NULL) {
+        return ERR_PTR(-EINVAL);
     }
 
     p_path = &p_file->f_path;
@@ -74,4 +118,16 @@ const char *fd_get_pathname(const int d_fd)
 
     free_page((unsigned long)p_tmp);
     return s_pathname_ret;
+}
+
+const char *fd_get_pathname(const int d_fd)
+{
+    const file_t *p_file = NULL; // File structure
+
+    p_file = fd_get_file(d_fd);
+    IF_U (IS_ERR(p_file)) {
+        return (char *)p_file;
+    }
+
+    return file_get_pathname(p_file);
 }
