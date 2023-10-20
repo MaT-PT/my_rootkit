@@ -225,7 +225,7 @@
  */
 #define DECLARE_HOOK_HANDLERS(...) __MAPX(DECLARE_HOOK_HANDLER, __VA_ARGS__)
 
-#define IF_U(cond) if (unlikely(cond)) // Wrapper for `if` statement with *unlikely* condition
-#define IF_L(cond) if (likely(cond))   // Wrapper for `if` statement with *likely* condition
+#define IF_U(cond) if (unlikely(cond)) /* Wrapper for `if` statement with *unlikely* condition */
+#define IF_L(cond) if (likely(cond))   /* Wrapper for `if` statement with *likely* condition */
 
 #endif

