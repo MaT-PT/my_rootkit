@@ -6,7 +6,6 @@
 #include <linux/linkage.h>
 #include <linux/syscalls.h>
 
-
 // MAP macros taken from https://github.com/swansontec/map-macro (public domain).
 // Names changed to __MAPX[...] to avoid conflicts with other macros.
 

@@ -6,7 +6,6 @@
 #include <linux/syscalls.h>
 #include <linux/types.h>
 
-
 #define KALLSYMS_NAME       "kallsyms_lookup_name"
 #define SYS_CALL_TABLE_NAME "sys_call_table"
 

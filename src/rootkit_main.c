@@ -14,7 +14,6 @@
 #include <linux/types.h>
 #include <linux/uaccess.h>
 
-
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");

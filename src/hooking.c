@@ -7,7 +7,6 @@
 #include <linux/kprobes.h>
 #include <linux/printk.h>
 
-
 static kallsyms_t lookup_name    = NULL; // Function pointer for `kallsyms_lookup_name()`.
 static sysfun_t *p_syscall_table = NULL; // Pointer to the syscall table.
 
