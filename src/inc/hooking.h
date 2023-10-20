@@ -1,6 +1,7 @@
 #ifndef _ROOTKIT_HOOKING_H_
 #define _ROOTKIT_HOOKING_H_
 
+#include "macro_utils.h"
 #include <asm/ptrace.h>
 #include <linux/syscalls.h>
 #include <linux/types.h>
@@ -8,6 +9,15 @@
 
 #define KALLSYMS_NAME       "kallsyms_lookup_name"
 #define SYS_CALL_TABLE_NAME "sys_call_table"
+
+/**
+ * Defines how to name a syscall hook handler function.
+ * The function name is `_new_<syscall_name>_handler`.
+ *
+ * @param _syscall_name The syscall name
+ * @return The hook handler function name
+ */
+#define HOOK_HANDLER_NAME(_syscall_name) _new_##_syscall_name##_handler
 
 /**
  * Creates a new `hook_t` structure with the given syscall number,
