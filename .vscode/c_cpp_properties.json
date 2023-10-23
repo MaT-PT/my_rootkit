@@ -3,6 +3,7 @@
         {
             "name": "Linux",
             "includePath": [
+                "${workspaceFolder}/src/inc",
                 "${workspaceFolder}/linux-5.15.y/include",
                 "${workspaceFolder}/linux-5.15.y/include/uapi",
                 "${workspaceFolder}/linux-5.15.y/include/generated",

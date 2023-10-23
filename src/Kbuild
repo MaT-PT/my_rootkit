@@ -2,6 +2,8 @@ MODULE_NAME := rootkit
 
 SRC_FILES := $(shell find '$(src)' -type f -name '*.c' -print)
 
+ccflags-y := -I$(src)/inc
+
 $(MODULE_NAME)-objs := $(shell realpath --relative-to='$(src)' -- $(SRC_FILES:.c=.o))
 
 obj-m := $(MODULE_NAME).o
