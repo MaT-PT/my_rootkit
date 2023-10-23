@@ -3,7 +3,18 @@
 ########################################################################
 if [ -z "$DISK_IMG" ]; then
     DISK_IMG="disk.img"
-    IMG_FORMAT="raw"
+fi
+if [ -z "$IMG_FORMAT" ]; then
+    case "$DISK_IMG" in
+        *.raw | *.img)
+        IMG_FORMAT="raw" ;;
+
+        *.qcow2)
+        IMG_FORMAT="qcow2" ;;
+
+        *)
+        IMG_FORMAT="raw" ;;
+    esac
 fi
 SMP="$(($(nproc) / 2))"
 MEM="1G"
@@ -21,8 +32,11 @@ fi
 echo "*** STARTING LINUX MACHINE ***"
 echo "* Using disk file $DISK_IMG (format: $IMG_FORMAT)"
 echo "* Running QEMU $kvm KVM on $SMP cores with $MEM memory..."
-echo -n "Press [Enter] to start, or Ctrl-C to exit"
-read rd
+
+if [ "$1" != "--no-pause" ]; then
+    echo -n "Press [Enter] to start, or Ctrl-C to exit"
+    read rd
+fi
 qemu-system-x86_64 "${args[@]}" -smp "$SMP" -m "$MEM" \
     -drive file="${DISK_IMG},index=0,media=disk,format=${IMG_FORMAT}" -nographic
 

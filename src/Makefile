@@ -1,4 +1,4 @@
-KDIR ?= ../linux-5.15.y/
+KDIR ?= $$PWD/../linux-5.15.y/
 
 .PHONY: modules clean
 

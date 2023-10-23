@@ -1,9 +1,13 @@
 #!/bin/bash
 
 ########################################################################
-DISK_IMG="disk.qcow2"
-IMG_FORMAT="qcow2"
-ROOTFS="/tmp/my-rootfs"
+if [ -z "$DISK_IMG" ]; then
+    DISK_IMG="disk.qcow2"
+    IMG_FORMAT="qcow2"
+fi
+if [ -z "$ROOTFS" ]; then
+    ROOTFS="/tmp/my-rootfs"
+fi
 PARTITION="/dev/sda1"
 KERNEL_DIR="$(find -maxdepth 1 -type d -name 'linux-*' | sort -V | tail -n 1)"
 KERNEL="${KERNEL_DIR}/arch/x86/boot/bzImage"
@@ -59,10 +63,12 @@ sudo guestunmount --retry=1 -- "$ROOTFS"
 rmdir -- "$ROOTFS"
 echo " done"
 
-# Run QEMU
-echo
-export DISK_IMG IMG_FORMAT
-$(dirname -- "$0")/start-qemu.sh
+if [ "$1" != "--no-qemu" ]; then
+    # Run QEMU
+    echo
+    export DISK_IMG IMG_FORMAT
+    $(dirname -- "$0")/start-qemu.sh
 
-ret=$?
-return $ret 2> /dev/null || exit $ret
+    ret=$?
+    return $ret 2> /dev/null || exit $ret
+fi

@@ -1,7 +1,9 @@
 #!/bin/bash
 
 ########################################################################
-DISK_IMG="disk.img"
+if [ -z "$DISK_IMG" ]; then
+    DISK_IMG="disk.img"
+fi
 DISK_SIZE="512M"
 ROOTFS="/tmp/my-rootfs"
 HOSTNAME="lfs2600"
@@ -140,11 +142,15 @@ echo " done"
 
 echo
 echo "* Image file $DISK_IMG created successfully"
-echo
-echo "------------------------------------------------------------------------"
-echo -n "Press [Enter] to update kernel/modules/test files, and start QEMU; press Ctrl-C to exit"
-read rd
-$(dirname -- "$0")/update-kernel-img.sh
 
-ret=$?
-return $ret 2> /dev/null || exit $ret
+if [ "$1" != "--no-update" ]; then
+    echo
+    echo "------------------------------------------------------------------------"
+    echo -n "Press [Enter] to update kernel/modules/test files, and start QEMU; press Ctrl-C to exit"
+    read rd
+    export ROOTFS DISK_IMG IMG_FORMAT='raw'
+    $(dirname -- "$0")/update-kernel-img.sh "$@"
+
+    ret=$?
+    return $ret 2> /dev/null || exit $ret
+fi
