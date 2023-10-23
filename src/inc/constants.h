@@ -2,6 +2,7 @@
 #define _ROOTKIT_CONSTANTS_H_
 
 #include <linux/types.h>
+#include <vdso/limits.h>
 
 extern const char S_HIDDEN_PREFIX[];                       // Prefix for hidden files/directories
 #define SZ_HIDDEN_PREFIX_LEN (sizeof(S_HIDDEN_PREFIX) - 1) /* Length of the prefix */
