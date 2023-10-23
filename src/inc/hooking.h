@@ -98,9 +98,10 @@ typedef struct hook_tag {
  * Structure that represents a signal handler.
  */
 typedef struct signal_handler_tag {
-    const int i32_pid;                                     // The process ID (< 0 for any PID)
-    const int i32_sig;                                     // The signal number (< 0 for any signal)
-    void (*const sig_handler)(pid_t i32_pid, int i32_sig); // The signal handler function
+    const pid_t i32_pid; // The process ID (PID_ANY for any PID)
+    const int i32_sig;   // The signal number (< 0 for any signal)
+    long (*const sig_handler)(const pid_t i32_pid,
+                              const int i32_sig); // The signal handler function
 } signal_handler_t;
 
 /**

