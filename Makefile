@@ -26,7 +26,7 @@ OPTS		:= -j$(NJOBS)
 OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
 OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 
-.PHONY: all clean mrproper clone pull config kernel kernel-modules \
+.PHONY: all clean mrproper clone pull config kernel kernel_modules \
 		modules copy rootfs qcow2 update run vars
 
 all: modules
@@ -86,7 +86,7 @@ config: $(CONFIG)
 
 kernel: $(KERNEL)
 
-kernel-modules: $(KSYMVERS)
+kernel_modules: $(KSYMVERS)
 
 rootfs: $(DISK_IMG)
 
