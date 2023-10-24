@@ -8,10 +8,14 @@ fi
 if [ -z "$ROOTFS" ]; then
     ROOTFS="/tmp/my-rootfs"
 fi
-KERNEL_DIR="$(find -maxdepth 1 -type d -name 'linux-*' | sort -V | tail -n 1)"
+if [ -z "$KERNEL_DIR" ]; then
+    KERNEL_DIR="$(find -maxdepth 1 -type d -name 'linux-*' | sort -V | tail -n 1)"
+fi
 KERNEL="${KERNEL_DIR}/arch/x86/boot/bzImage"
 TEST_DIR="$(dirname -- "$0")/tests"
-MODULE_DIR="./modules"
+if [ -z "$MODULE_DIR" ]; then
+    MODULE_DIR="./modules"
+fi
 ########################################################################
 
 if [ -z "$KERNEL_DIR" ]; then
@@ -80,15 +84,22 @@ echo -n "  * "
 sudo cp -v -- "$KERNEL" "${ROOTFS}/boot/vmlinuz"
 
 if [ -d "$TEST_DIR" ]; then
-    sudo cp -rv -- "${TEST_DIR}/." "${ROOTFS}/root/" | sed 's/^/  * /'
+    sudo cp -rv -- "${TEST_DIR}/." "${ROOTFS}/root/" | grep -Fv '.vscode' | sed 's/^/  * /'
+    sudo rm -rf -- "${ROOTFS}/root/.vscode"
 else
     echo "  * Warning: test dir $TEST_DIR not found, skipping..."
 fi
 echo "* Done"
 
+# Install kernel modules
+echo "* Installing kernel modules..."
+sudo make -C "$KERNEL_DIR" modules_install INSTALL_MOD_PATH="$ROOTFS"
+echo "* Done"
+
 # Update modules
 echo "* Updating modules..."
-sudo find "$MODULE_DIR" -type f -name '*.ko' -exec echo -n '   * ' \; -exec cp -v -- '{}' "${ROOTFS}/root/" \;
+sudo find "$MODULE_DIR" -type f -name '*.ko' -exec echo -n '   * ' \; \
+-exec cp -v -- '{}' "${ROOTFS}/root/" \;
 echo "* Done"
 
 # Cleanup
@@ -104,7 +115,7 @@ if [ "$1" != "--no-qemu" ]; then
     echo
     export DISK_IMG IMG_FORMAT
     $(dirname -- "$0")/start-qemu.sh
-
-    ret=$?
-    return $ret 2> /dev/null || exit $ret
 fi
+
+ret=$?
+return $ret 2> /dev/null || exit $ret
