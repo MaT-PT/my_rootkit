@@ -1,5 +1,5 @@
 define relpath
-$(shell realpath -m --relative-to='$(CURDIR)' -- "'(1)')
+$(shell realpath -m --relative-to='$(CURDIR)' -- '$(1)')
 endef
 
 BRANCH		?= linux-5.15.y
