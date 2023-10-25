@@ -4,6 +4,7 @@
 #include "constants.h"
 #include "macro_utils.h"
 #include <asm/ptrace.h>
+#include <linux/init.h>
 #include <linux/syscalls.h>
 #include <linux/types.h>
 
@@ -65,9 +66,13 @@
  * @param ... The syscall names
  * @return The array of `hook_t` structures
  */
-#define SYSCALL_HOOKS(...)                     \
-    {                                          \
-        __MAPX_LIST(SYSCALL_HOOK, __VA_ARGS__) \
+#define SYSCALL_HOOKS(...)                                       \
+    {                                                            \
+        __MAPX_LIST(SYSCALL_HOOK, __VA_ARGS__),                  \
+        {                                                        \
+            /* The last element must have a NULL `new_sysfun` */ \
+            0, NULL, NULL                                        \
+        }                                                        \
     }
 
 /**
@@ -108,7 +113,7 @@ typedef struct signal_handler_tag {
  * Initializes the hooking module.
  * This function must be called before any other hooking function or macro.
  */
-int init_hooking(void);
+int init_hooking(void) __init;
 
 /**
  * Gets the function pointer of the syscall entry for the given syscall number.
@@ -146,19 +151,17 @@ void unhook_syscall(const hook_t *const p_hook);
  * The syscalls are hooked in the order they appear in the array.
  * If an error occurs, the already installed hooks are uninstalled in reverse order.
  *
- * @param p_hooks  The array of hooks to be installed
- * @param sz_count The number of hooks in the array
+ * @param p_hooks The array of hooks to be installed (the last element must have a NULL `new_sysfun`)
  * @return 0 on success, otherwise an error code
  */
-int hook_syscalls(hook_t p_hooks[], const size_t sz_count);
+int hook_syscalls(hook_t p_hooks[]) __init;
 
 /**
  * Unhooks the given syscalls.
  * The syscalls are unhooked in the order they appear in the array.
  *
- * @param p_hooks  The array of hooks to be uninstalled
- * @param sz_count The number of hooks in the array
+ * @param p_hooks The array of hooks to be uninstalled (the last element must have a NULL `new_sysfun`)
  */
-void unhook_syscalls(const hook_t p_hooks[], const size_t sz_count);
+void unhook_syscalls(const hook_t p_hooks[]) __exit;
 
 #endif
