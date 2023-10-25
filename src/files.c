@@ -8,17 +8,25 @@
 #include <linux/fdtable.h>
 #include <linux/fs.h>
 #include <linux/gfp.h>
+#include <linux/kstrtox.h>
 #include <linux/path.h>
 #include <linux/spinlock.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
-bool is_proc_pid_descendant(const file_t *const p_file, const int32_t i32_pid)
+bool is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid)
 {
-    const dentry_t *p_parent = NULL;  // Parent dentry structure
-    char s_pid[12]           = { 0 }; // PID as a string (2^32 has 10 digits in base 10)
+    int i_res                = 0;    // Result of `kstrtoint()` (0 on success)
+    const dentry_t *p_parent = NULL; // Parent dentry structure
+    pid_t i32_pid            = -1;   // PID of the process found in the path, if any
 
-    IF_U (!is_proc_descendant(p_file) || i32_pid < 0) {
+    IF_U (!is_proc_descendant(p_file)) {
+        if (ps_name != NULL) {
+            *ps_name = NULL;
+        }
+        if (p_pid != NULL) {
+            *p_pid = -1;
+        }
         return false;
     }
 
@@ -29,11 +37,20 @@ bool is_proc_pid_descendant(const file_t *const p_file, const int32_t i32_pid)
         p_parent = p_parent->d_parent;
     }
 
-    // Copy the PID value to a string
-    snprintf(s_pid, sizeof(s_pid), "%d", i32_pid);
+    // Check if the parent directory is /proc/<pid>, with <pid> being a number
+    i_res = kstrtoint(p_parent->d_name.name, 10, &i32_pid);
 
-    // Check if the parent directory is /proc/<pid>
-    return !strncmp(p_parent->d_name.name, s_pid, sizeof(s_pid));
+    if (ps_name != NULL) {
+        // Set ps_name to the name of the first directory in the path after its root
+        *ps_name = p_parent->d_name.name;
+    }
+
+    if (p_pid != NULL) {
+        // Set p_pid to the corresponding PID, if this is a process file
+        *p_pid = i_res ? -1 : i32_pid;
+    }
+
+    return i_res == 0;
 }
 
 const file_t *fd_get_file(const int d_fd)

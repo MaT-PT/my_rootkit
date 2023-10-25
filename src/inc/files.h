@@ -87,7 +87,7 @@ static inline bool is_proc_root(const file_t *const p_file)
  *
  * @param p_file The file structure
  * @return `true` if the parent of the given file structure is the root of a proc filesystem,
- * `false` otherwise
+ *         `false` otherwise
  */
 static inline bool is_parent_proc_root(const file_t *const p_file)
 {
@@ -107,7 +107,7 @@ static inline bool is_parent_proc_root(const file_t *const p_file)
  *
  * @param p_file The file structure
  * @return `true` if the given file structure is a strict descendant of the root of a proc
- * filesystem, `false` otherwise
+ *         filesystem, `false` otherwise
  */
 static inline bool is_proc_descendant(const file_t *const p_file)
 {
@@ -119,14 +119,38 @@ static inline bool is_proc_descendant(const file_t *const p_file)
 }
 
 /**
- * Is the given file structure /proc/<pid> or one of its descendants?
- * This is used to determine if a file structure is a process file.
+ * Is the given file structure a process file?
  *
- * @param p_file The file structure
+ * @param p_file   The file structure
+ * @param ps_name  (Optional) This gets set to the name of the first directory
+ *                 in the path after its root
+ * @param p_pid    This gets set to the corresponding PID, if the given file structure is a process
+ * @return `true` if the given file structure is a process file, `false` otherwise
+ */
+bool is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid);
+
+/**
+ * Is the given file structure /proc/<pid> or one of its descendants?
+ *
+ * @param p_file  The file structure
  * @param i32_pid The PID
  * @return `true` if the given file structure is a descendant of /proc/<pid>, `false` otherwise
  */
-bool is_proc_pid_descendant(const file_t *const p_file, const int32_t i32_pid);
+static inline bool is_proc_pid_descendant(const file_t *const p_file, const pid_t i32_pid)
+{
+    pid_t i32_found_pid = -1; // PID of the process found in the path, if any
+
+    IF_U (i32_pid < 0) {
+        return false;
+    }
+
+    if (!is_process_file(p_file, NULL, &i32_found_pid)) {
+        return false;
+    }
+
+    // Check if the parent directory is /proc/<pid>
+    return i32_found_pid == i32_pid;
+}
 
 /**
  * Gets the file structure associated with the given file descriptor.

