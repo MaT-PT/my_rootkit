@@ -32,55 +32,55 @@ OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 all: modules
 
 %.img:
-	$(info > Making rootfs image: $@...)
+	@echo '> Making rootfs image: $@...'
 	DISK_IMG='$@' \
 		'$(ROOT_DIR)/scripts/make-rootfs.sh' --no-update
-	$(info > Rootfs image created: $@.)
+	@echo '> Rootfs image created: $@.'
 
 %.qcow2: %.img
-	$(info > Converting image $< to $@...)
+	@echo '> Converting image $< to $@...'
 	qemu-img convert -f raw -O qcow2 -p -c -W -m 16 '$<' '$@'
-	$(info > Qcow2 image created: $@.)
+	@echo '> Qcow2 image created: $@.'
 
 $(KMAKEFILE):
-	$(info > Cloning kernel source...)
+	@echo '> Cloning kernel source...'
 	git clone 'git://git.kernel.org/pub/scm/linux/kernel/git/stable/linux.git' \
 		--depth 1 '$(KDIR)' -b '$(BRANCH)'
-	$(info > Kernel source cloned.)
+	@echo '> Kernel source cloned.'
 
 $(CONFIG): $(KMAKEFILE)
-	$(info > Configuring kernel...)
+	@echo '> Configuring kernel...'
 	$(MAKE) $(OPTS_KMAKE) defconfig
 	$(MAKE) $(OPTS_KMAKE) kvm_guest.config
-	$(info > Kernel configured.)
+	@echo '> Kernel configured.'
 
 $(KERNEL): $(CONFIG)
-	$(info > Building kernel...)
+	@echo '> Building kernel...'
 	$(MAKE) $(OPTS_KMAKE) bzImage
-	$(info > Kernel built.)
+	@echo '> Kernel built.'
 
 $(KSYMVERS): $(KERNEL)
-	$(info > Building kernel modules...)
+	@echo '> Building kernel modules...'
 	$(MAKE) $(OPTS_KMAKE) modules
-	$(info > Kernel modules built.)
+	@echo '> Kernel modules built.'
 
 clean:
-	$(info > Cleaning build files...)
+	@echo '> Cleaning build files...'
 	$(MAKE) $(OPTS_MODULE) clean
 	$(MAKE) $(OPTS_KMAKE) M='$(ROOT_DIR)' clean
-	$(info > Build files cleaned.)
+	@echo '> Build files cleaned.'
 
 mrproper: clean
-	$(info > Cleaning copied modules...)
+	@echo '> Cleaning copied modules...'
 	rm -rf -- '$(MOD_DIR)'
-	$(info > Copied modules cleaned.)
+	@echo '> Copied modules cleaned.'
 
 clone: $(KMAKEFILE)
 
 pull: clone
-	$(info > Pulling kernel source...)
+	@echo '> Pulling kernel source...'
 	git -C '$(KDIR)' pull
-	$(info > Kernel source pulled.)
+	@echo '> Kernel source pulled.'
 
 config: $(CONFIG)
 
@@ -93,27 +93,27 @@ rootfs: $(DISK_IMG)
 qcow2: $(DISK_QCOW2)
 
 modules: $(KSYMVERS)
-	$(info > Building modules...)
+	@echo '> Building modules...'
 	$(MAKE) $(OPTS_MODULE) modules
-	$(info > Modules built.)
+	@echo '> Modules built.'
 
 copy: modules
-	$(info > Copying modules...)
+	@echo '> Copying modules...'
 	mkdir -p -- '$(MOD_DIR)'
 	cp -- '$(SRC_DIR)'/*.ko '$(MOD_DIR)'
-	$(info > Modules copied.)
+	@echo '> Modules copied.'
 
 update: kernel rootfs copy
-	$(info > Updating kernel image...)
+	@echo '> Updating kernel image...'
 	DISK_IMG='$(DISK_IMG)' KERNEL_DIR='$(KDIR)' MODULE_DIR='$(MOD_DIR)' \
 		'$(ROOT_DIR)/scripts/update-kernel-img.sh' --no-qemu
-	$(info > Kernel image updated.)
+	@echo '> Kernel image updated.'
 
 run: update
-	$(info > Running QEMU...)
+	@echo '> Running QEMU...'
 	DISK_IMG='$(DISK_IMG)' \
 		'$(ROOT_DIR)/scripts/start-qemu.sh' --no-pause
-	$(info > QEMU exited.)
+	@echo '> QEMU exited.'
 
 # Print all variables (for debugging)
 vars:
