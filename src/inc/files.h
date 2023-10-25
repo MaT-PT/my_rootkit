@@ -3,7 +3,7 @@
 
 #include "macro_utils.h"
 #include <linux/types.h>
-// types.h is required for dirent.h, so we include it first
+// types.h is required for dirent.h, so we include it before
 #include <linux/dcache.h>
 #include <linux/dirent.h>
 #include <linux/fdtable.h>
@@ -91,7 +91,7 @@ static inline bool is_proc_root(const file_t *const p_file)
  */
 static inline bool is_parent_proc_root(const file_t *const p_file)
 {
-    const dentry_t *p_parent = NULL; // Parent file structure
+    const dentry_t *p_parent = NULL; // Parent dentry structure
 
     IF_U (p_file == NULL) {
         return false;
@@ -101,6 +101,32 @@ static inline bool is_parent_proc_root(const file_t *const p_file)
 
     return IS_ROOT(p_parent) && is_in_proc(p_file);
 }
+
+/**
+ * Is the given file structure a strict descendant of the root of a `proc` filesystem?
+ *
+ * @param p_file The file structure
+ * @return `true` if the given file structure is a strict descendant of the root of a proc
+ * filesystem, `false` otherwise
+ */
+static inline bool is_proc_descendant(const file_t *const p_file)
+{
+    IF_U (p_file == NULL) {
+        return false;
+    }
+
+    return !is_file_root(p_file) && is_in_proc(p_file);
+}
+
+/**
+ * Is the given file structure /proc/<pid> or one of its descendants?
+ * This is used to determine if a file structure is a process file.
+ *
+ * @param p_file The file structure
+ * @param i32_pid The PID
+ * @return `true` if the given file structure is a descendant of /proc/<pid>, `false` otherwise
+ */
+bool is_proc_pid_descendant(const file_t *const p_file, const int32_t i32_pid);
 
 /**
  * Gets the file structure associated with the given file descriptor.

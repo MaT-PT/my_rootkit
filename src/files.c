@@ -13,6 +13,29 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
+bool is_proc_pid_descendant(const file_t *const p_file, const int32_t i32_pid)
+{
+    const dentry_t *p_parent = NULL;  // Parent dentry structure
+    char s_pid[12]           = { 0 }; // PID as a string (2^32 has 10 digits in base 10)
+
+    IF_U (!is_proc_descendant(p_file) || i32_pid < 0) {
+        return false;
+    }
+
+    p_parent = p_file->f_path.dentry;
+
+    // Go up the directory tree until we reach a direct child of the root
+    while (!IS_ROOT(p_parent->d_parent)) {
+        p_parent = p_parent->d_parent;
+    }
+
+    // Copy the PID value to a string
+    snprintf(s_pid, sizeof(s_pid), "%d", i32_pid);
+
+    // Check if the parent directory is /proc/<pid>
+    return !strncmp(p_parent->d_name.name, s_pid, sizeof(s_pid));
+}
+
 const file_t *fd_get_file(const int d_fd)
 {
     const file_t *p_file = NULL;           // File structure

