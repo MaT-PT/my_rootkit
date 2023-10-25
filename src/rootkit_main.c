@@ -20,8 +20,6 @@ MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
-const char S_HIDDEN_PREFIX[] = ".rootkit_";
-
 static int __init rootkit_init(void)
 {
     int i_err;
