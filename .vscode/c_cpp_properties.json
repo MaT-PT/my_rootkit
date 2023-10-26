@@ -22,8 +22,7 @@
             ],
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c99",
-            "intelliSenseMode": "${default}",
-            "configurationProvider": "ms-vscode.makefile-tools"
+            "intelliSenseMode": "${default}"
         }
     ],
     "version": 4
