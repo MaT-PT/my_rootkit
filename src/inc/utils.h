@@ -1,7 +1,6 @@
 #ifndef _ROOTKIT_UTILS_H_
 #define _ROOTKIT_UTILS_H_
 
-#include "constants.h"
 #include "macro_utils.h"
 #include <asm/current.h>
 #include <linux/kstrtox.h>

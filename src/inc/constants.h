@@ -12,8 +12,8 @@ extern const char S_HIDDEN_PREFIX[];                    // Prefix for hidden fil
 #define SIGHIDE 43 /* Hide the process with the given PID */
 #define SIGSHOW 44 /* Show the process with the given PID */
 
-#define PID_ANY INT_MIN /* Any PID */
-#define SIG_ANY INT_MIN /* Any signal */
+#define PID_ANY (pid_t) INT_MIN /* Any PID */
+#define SIG_ANY INT_MIN         /* Any signal */
 
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */

