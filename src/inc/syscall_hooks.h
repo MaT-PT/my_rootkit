@@ -6,7 +6,7 @@
 #include "utils.h"
 #include <asm/unistd.h>
 
-#define HOOKED_SYSCALLS read, write, open, pread64, sendfile, getdents, getdents64, kill
+#define HOOKED_SYSCALLS read, pread64, write, sendfile, open, getdents, getdents64, kill
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name of the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name of the original syscall functions array */

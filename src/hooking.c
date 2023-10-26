@@ -143,6 +143,7 @@ int __init hook_syscalls(hook_t p_hooks[])
 void __exit unhook_syscalls(const hook_t p_hooks[])
 {
     size_t i;
+
     for (i = 0; p_hooks[i].new_sysfun != NULL; ++i) {
         unhook_syscall(&p_hooks[i]);
     }
