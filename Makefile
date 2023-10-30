@@ -9,7 +9,7 @@ BRANCH		?= linux-5.15.y
 DISK_IMG	?= disk.img
 NJOBS 		?= $(shell echo $$(( $$(nproc) + 0 )))
 NLOAD		?= $(shell echo "$$(nproc) * 0.85" | bc)
-TMPDIR 		?= /tmp/rootkit-build
+TMPDIR		?= /tmp/rootkit-build
 
 # Derived directories and files
 ROOT_DIR	:= $(shell echo "$$PWD")
@@ -24,7 +24,7 @@ KERNEL		:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
 KSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers)
 
 # Options for sub-makes
-OPTS_CFLAGS := -march=native -O2 -pipe $(shell command -v mold 2>&1 >/dev/null && echo "-fuse-ld=mold")
+OPTS_CFLAGS	:= -march=native -O2 -pipe $(shell command -v mold 2>&1 >/dev/null && echo "-fuse-ld=mold")
 OPTS		:= -j$(NJOBS) -l$(NLOAD) CFLAGS='$(strip $(OPTS_CFLAGS))' TMPDIR='$(TMPDIR)'
 OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
 OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
