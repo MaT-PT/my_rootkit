@@ -285,12 +285,13 @@ bool is_path_hidden(const path_t *const p_path);
  * or if the file name starts with the hidden prefix.
  * Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
  *
- * @param i32_dfd    The file descriptor of the directory containing the pathname, or `AT_FDCWD`
- * @param s_pathname The pathname to check
- * @param i32_flags  Flags to use when resolving the pathname
+ * @param i32_dfd          The file descriptor of the directory containing the pathname, or `AT_FDCWD`
+ * @param s_pathname       The pathname to check
+ * @param i32_lookup_flags Flags to use when resolving the pathname (`LOOKUP_*` flags, not `AT_*` or `O_*`)
  * @return `true` if the given pathname needs to be hidden, `false` otherwise
  */
-bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname, int i32_flags);
+bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname,
+                        unsigned int i32_lookup_flags);
 
 /**
  * Does the given file need to be hidden?

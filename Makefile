@@ -7,7 +7,9 @@ INIT_VARS	:= $(.VARIABLES)
 # Default values (can be overridden by environment variables or command line arguments)
 BRANCH		?= linux-5.15.y
 DISK_IMG	?= disk.img
-NJOBS 		?= $(shell echo $$(( $$(nproc) + 1 )))
+NJOBS 		?= $(shell echo $$(( $$(nproc) + 0 )))
+NLOAD		?= $(shell echo "$$(nproc) * 0.85" | bc)
+TMPDIR 		?= /tmp/rootkit-build
 
 # Derived directories and files
 ROOT_DIR	:= $(shell echo "$$PWD")
@@ -22,7 +24,8 @@ KERNEL		:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
 KSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers)
 
 # Options for sub-makes
-OPTS		:= -j$(NJOBS)
+OPTS_CFLAGS := -march=native -O2 -pipe $(shell command -v mold 2>&1 >/dev/null && echo "-fuse-ld=mold")
+OPTS		:= -j$(NJOBS) -l$(NLOAD) CFLAGS='$(strip $(OPTS_CFLAGS))' TMPDIR='$(TMPDIR)'
 OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
 OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 
@@ -50,22 +53,26 @@ $(KMAKEFILE):
 
 $(CONFIG): $(KMAKEFILE)
 	@echo '> Configuring kernel...'
+	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) defconfig
 	$(MAKE) $(OPTS_KMAKE) kvm_guest.config
 	@echo '> Kernel configured.'
 
 $(KERNEL): $(CONFIG)
 	@echo '> Building kernel...'
+	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) bzImage
 	@echo '> Kernel built.'
 
 $(KSYMVERS): $(KERNEL)
 	@echo '> Building kernel modules...'
+	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) modules
 	@echo '> Kernel modules built.'
 
 clean:
 	@echo '> Cleaning build files...'
+	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_MODULE) clean
 	$(MAKE) $(OPTS_KMAKE) M='$(ROOT_DIR)' clean
 	@echo '> Build files cleaned.'
@@ -94,6 +101,7 @@ qcow2: $(DISK_QCOW2)
 
 modules: $(KSYMVERS)
 	@echo '> Building modules...'
+	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_MODULE) modules
 	@echo '> Modules built.'
 
