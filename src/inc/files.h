@@ -290,7 +290,7 @@ bool is_path_hidden(const path_t *const p_path);
  * @param i32_lookup_flags Flags to use when resolving the pathname (`LOOKUP_*` flags, not `AT_*` or `O_*`)
  * @return `true` if the given pathname needs to be hidden, `false` otherwise
  */
-bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname,
+bool is_pathname_hidden(const int i32_dfd, const char *const __user s_pathname,
                         unsigned int i32_lookup_flags);
 
 /**

