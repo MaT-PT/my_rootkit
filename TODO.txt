@@ -1,4 +1,5 @@
-Also hook execve, execveat, etc.
+Also hook link, linkat, symlink, symlinkat, unlink, unlinkat, rename, renameat, etc.
+Also hook readlink, readlinkat, etc.
 Create macros for conditional printing
 Prevent rootkit from being loaded multiple times
 Allow some processes to access hidden files / bypass rootkit
