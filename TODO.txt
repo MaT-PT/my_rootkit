@@ -1,0 +1,6 @@
+Also hook chdir, fchdir, etc.
+Also execve, execveat, etc.
+Create macros for conditional printing
+Prevent rootkit from being loaded multiple times
+Allow some processes to access hidden files / bypass rootkit
+Use other mechanisms to send signals/requests to rootkit
