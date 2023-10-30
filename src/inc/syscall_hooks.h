@@ -8,8 +8,8 @@
 
 #define HOOKED_SYSCALLS                                                                          \
     read, pread64, write, sendfile, open, openat, openat2, creat, access, faccessat, faccessat2, \
-        stat, lstat, newfstatat, statx, truncate, chdir, chroot, chmod, fchmodat, chown, lchown, \
-        fchownat, uselib, execve, execveat, getdents, getdents64, kill
+        stat, lstat, newfstatat, statx, readlink, readlinkat, truncate, chdir, chroot, chmod,    \
+        fchmodat, chown, lchown, fchownat, uselib, execve, execveat, getdents, getdents64, kill
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
