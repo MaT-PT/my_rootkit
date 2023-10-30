@@ -93,7 +93,7 @@ bool is_path_hidden(const path_t *const p_path)
     return false;
 }
 
-bool is_pathname_hidden(const int i32_dfd, const char *const __user s_pathname,
+bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
                         unsigned int ui32_lookup_flags)
 {
     bool b_ret               = false; // Return value
