@@ -9,11 +9,15 @@
 #define HOOKED_SYSCALLS                                                                          \
     read, pread64, write, sendfile, open, openat, openat2, creat, access, faccessat, faccessat2, \
         stat, lstat, newfstatat, statx, readlink, readlinkat, truncate, chdir, chroot, chmod,    \
-        fchmodat, chown, lchown, fchownat, uselib, execve, execveat, getdents, getdents64, kill
+        fchmodat, chown, lchown, fchownat, uselib, execve, execveat, getdents, getdents64, kill, \
+        link, linkat, unlink, unlinkat, rename, renameat, renameat2, mkdir, mkdirat, mknod,      \
+        mknodat, rmdir
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
 #define P_SIG_HANDLERS  p_sig_handlers  /* Variable name for the signal handler array */
+
+#define AT_LOOKUP_PARENTS 0x10000000 // Lookup only parent directories
 
 // Array of the original syscall function references.
 extern sysfun_t P_ORIG_SYSFUNS[__NR_syscalls];

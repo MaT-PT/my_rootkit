@@ -1,4 +1,6 @@
-Also hook link, linkat, symlink, symlinkat, unlink, unlinkat, rename, renameat, etc.
+Also hook mount, umount2, pivot_root, swapon, swapoff, etc.
+Check path hierarchy for hidden names when creating new files/dirs
+Check early error returns from system calls
 Create macros for conditional printing
 Prevent rootkit from being loaded multiple times
 Allow some processes to access hidden files / bypass rootkit

