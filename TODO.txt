@@ -1,4 +1,5 @@
-Also hook mount, umount2, pivot_root, swapon, swapoff, etc.
+Also hook move_mount, mount_setattr, pivot_root, swapon, swapoff, etc.
+Also hook open_tree
 Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
 Create macros for conditional printing
