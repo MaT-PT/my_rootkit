@@ -11,7 +11,7 @@
         stat, lstat, newfstatat, statx, readlink, readlinkat, truncate, chdir, chroot, chmod,    \
         fchmodat, chown, lchown, fchownat, uselib, execve, execveat, getdents, getdents64, kill, \
         link, linkat, unlink, unlinkat, rename, renameat, renameat2, mkdir, mkdirat, mknod,      \
-        mknodat, rmdir, mount, umount2
+        mknodat, rmdir, mount, umount2, move_mount, pivot_root, mount_setattr
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
