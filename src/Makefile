@@ -10,7 +10,7 @@ KDIR		:= $(call relpath,$(ROOT_DIR)/$(BRANCH))
 .PHONY: modules clean
 
 modules:
-	$(MAKE) -C "$(KDIR)" M="$(SRC_DIR)" modules
+	$(MAKE) -C "$(KDIR)" M="$(SRC_DIR)" CFLAGS='$(CFLAGS)' modules
 
 clean:
-	$(MAKE) -C "$(KDIR)" M="$(SRC_DIR)" clean
+	$(MAKE) -C "$(KDIR)" M="$(SRC_DIR)" CFLAGS='$(CFLAGS)' clean
