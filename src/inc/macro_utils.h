@@ -5,6 +5,7 @@
 #include <asm/ptrace.h>
 #include <linux/compiler.h>
 #include <linux/linkage.h>
+#include <linux/math.h>
 #include <linux/syscalls.h>
 
 // MAP macros taken from https://github.com/swansontec/map-macro (public domain).
@@ -227,5 +228,7 @@
 
 #define IF_U(cond) if (unlikely(cond)) /* Wrapper for `if` statement with *unlikely* condition */
 #define IF_L(cond) if (likely(cond))   /* Wrapper for `if` statement with *likely* condition */
+
+#define SIGNED_ARG(x) (x) < 0 ? "-" : "", abs(x)
 
 #endif

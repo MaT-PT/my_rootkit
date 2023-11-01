@@ -2,7 +2,6 @@ Also hook swapon, swapoff, etc.
 Also hook open_tree, statfs
 Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
-Print flags as hex, handling negative values
 Create macros for conditional printing
 Prevent rootkit from being loaded multiple times
 Allow some processes to access hidden files / bypass rootkit

