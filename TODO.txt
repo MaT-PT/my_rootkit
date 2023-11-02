@@ -1,4 +1,4 @@
-Also hook open_tree, statfs
+Also hook statfs
 Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
 Create macros for conditional printing

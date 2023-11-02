@@ -1,5 +1,6 @@
 #define _GNU_SOURCE
 #include <fcntl.h>
+#include <linux/mount.h>
 #include <linux/stat.h>
 #include <stdio.h>
 #include <string.h>
@@ -40,6 +41,14 @@ void test_open(void)
 
     fd = syscall(SYS_creat, HIDDEN_FILE, 0644);
     printf("creat  '" HIDDEN_FILE "': %d\n", fd);
+    close(fd);
+
+    fd = syscall(SYS_open_tree, fd_cwd, TEST_FILE, OPEN_TREE_CLONE);
+    printf("open_tree '" TEST_FILE "': %d\n", fd);
+    close(fd);
+
+    fd = syscall(SYS_open_tree, fd_cwd, HIDDEN_FILE, OPEN_TREE_CLONE);
+    printf("open_tree '" HIDDEN_FILE "': %d\n", fd);
     close(fd);
 
     close(fd_cwd);
