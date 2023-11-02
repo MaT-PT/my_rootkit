@@ -1,4 +1,3 @@
-Also hook swapon, swapoff, etc.
 Also hook open_tree, statfs
 Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
