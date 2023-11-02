@@ -1,4 +1,3 @@
-Also hook xattr & friends to hide files
 Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
 Create macros for conditional printing
