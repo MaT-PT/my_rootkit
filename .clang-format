@@ -566,6 +566,32 @@ SpacesInCStyleCastParentheses: false
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 Standard: Auto
+StatementMacros:
+  - DECLARE_HOOK_HANDLERS
+  - DECLARE_HOOK_HANDLER
+  - INIT_HOOK_HANDLERS
 TabWidth: 4
+TypenameMacros:
+  - DECLARE_HOOK_HANDLER
+  - SYSCALL_HOOK_HANDLERx
+  - SYSCALL_HOOK_HANDLER0
+  - SYSCALL_HOOK_HANDLER1
+  - SYSCALL_HOOK_HANDLER2
+  - SYSCALL_HOOK_HANDLER3
+  - SYSCALL_HOOK_HANDLER4
+  - SYSCALL_HOOK_HANDLER5
+  - SYSCALL_HOOK_HANDLER6
+  - __DECL_REG
+  - __DECL_REGx
+  - __DECL_REG0
+  - __DECL_REG1
+  - __DECL_REG2
+  - __DECL_REG3
+  - __DECL_REG4
+  - __DECL_REG5
+  - __DECL_REG6
+  - NEW_HOOK
+  - NEW_SIGNAL_HANDLER
+  - SYSCALL_HOOK
 UseTab: Never
 ...
