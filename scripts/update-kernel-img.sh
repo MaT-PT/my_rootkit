@@ -96,6 +96,11 @@ echo "* Installing kernel modules..."
 sudo make -C "$KERNEL_DIR" modules_install INSTALL_MOD_PATH="$ROOTFS"
 echo "* Done"
 
+# Install Linux headers
+echo "* Installing Linux headers..."
+sudo make -C "$KERNEL_DIR" headers_install INSTALL_HDR_PATH="$ROOTFS/usr"
+echo "* Done"
+
 # Update modules
 echo "* Updating modules..."
 sudo find "$MODULE_DIR" -type f -name '*.ko' -exec echo -n '   * ' \; \
