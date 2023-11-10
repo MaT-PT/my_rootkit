@@ -12,7 +12,7 @@ NLOAD		?= $(shell echo "$$(nproc) * 0.85" | bc)
 TMPDIR		?= /tmp/rootkit-build
 
 # Derived directories and files
-ROOT_DIR	:= $(shell echo "$$PWD")
+ROOT_DIR	:= $(shell if [ -d "$$PWD/src" ]; then echo "$$PWD"; else echo "$$PWD/.."; fi)
 SRC_DIR		:= $(call relpath,$(ROOT_DIR)/src)
 MOD_DIR		:= $(call relpath,$(ROOT_DIR)/modules)
 SCRIPT_DIR	:= $(call relpath,$(ROOT_DIR)/scripts)
@@ -32,7 +32,7 @@ OPTS		:= -j$(NJOBS) -l$(NLOAD) CFLAGS='$(strip $(OPTS_CFLAGS))' TMPDIR='$(TMPDIR
 OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
 OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 
-.PHONY: all clean mrproper clone pull config kernel kernel_modules \
+.PHONY: all clean mrproper clone pull config kernel kernel_modules kernel_headers \
 		modules copy rootfs qcow2 syscalls update run vars FORCE
 
 all: modules
@@ -104,6 +104,12 @@ kernel: $(KERNEL)
 
 kernel_modules: $(KSYMVERS)
 
+kernel_headers:
+	@echo '> Building kernel headers...'
+	mkdir -p -- '$(TMPDIR)'
+	$(MAKE) $(OPTS_KMAKE) headers
+	@echo '> Kernel headers built.'
+
 rootfs: $(DISK_IMG)
 
 qcow2: $(DISK_QCOW2)
@@ -123,7 +129,7 @@ copy: modules
 	cp -- '$(SRC_DIR)'/*.ko '$(MOD_DIR)'
 	@echo '> Modules copied.'
 
-update: kernel rootfs copy
+update: kernel kernel_headers rootfs copy
 	@echo '> Updating kernel image...'
 	DISK_IMG='$(DISK_IMG)' KERNEL_DIR='$(KDIR)' MODULE_DIR='$(MOD_DIR)' \
 		'$(SCRIPT_DIR)/update-kernel-img.sh' --no-qemu

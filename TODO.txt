@@ -4,3 +4,5 @@ Create macros for conditional printing
 Prevent rootkit from being loaded multiple times
 Allow some processes to access hidden files / bypass rootkit
 Use other mechanisms to send signals/requests to rootkit
+Hide network connections/ports
+Fix mkdir: if path does not exist, check parent dirs anyway
