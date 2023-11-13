@@ -109,6 +109,8 @@ typedef struct signal_handler_tag {
                               const int i32_sig); // The signal handler function
 } signal_handler_t;
 
+extern kallsyms_t lookup_name; // Function pointer for `kallsyms_lookup_name()`.
+
 /**
  * Initializes the hooking module.
  * This function must be called before any other hooking function or macro.
