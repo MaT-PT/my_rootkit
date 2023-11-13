@@ -6,4 +6,3 @@ Allow some processes to access hidden files / bypass rootkit
 Use other mechanisms to send signals/requests to rootkit
 Hide network connections/ports
 Fix mkdir: if path does not exist, check parent dirs anyway
-Harmonize variable prefixes (l_ -> i64_, ul_ -> ui64_, us_ -> ui16_, etc.)

