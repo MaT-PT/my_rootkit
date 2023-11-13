@@ -1,8 +1,8 @@
-INIT_VARS	:= $(.VARIABLES)
-
 define relpath
 $(shell realpath -m --relative-to='$(CURDIR)' -- '$(1)')
 endef
+
+INIT_VARS	:= $(.VARIABLES)
 
 # Default values (can be overridden by environment variables or command line arguments)
 BRANCH		?= linux-5.15.y
