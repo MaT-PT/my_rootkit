@@ -22,7 +22,7 @@ DISK_IMG	:= $(call relpath,$(ROOT_DIR)/$(DISK_IMG))
 KMAKEFILE	:= $(call relpath,$(KDIR)/Makefile)
 CONFIG		:= $(call relpath,$(KDIR)/.config)
 KERNEL		:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
-KSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers)
+KSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers) $(call relpath,$(KDIR)/modules.order)
 SYSCALLS_H	:= $(SRC_DIR)/inc/hooked_syscalls.h
 SC_C_FILES	:= $(shell find '$(SRC_DIR)/syscall_hooks' -type f -name '*.c') # Syscall hook .c files
 
