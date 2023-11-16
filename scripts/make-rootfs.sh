@@ -70,6 +70,7 @@ sudo mkfs.ext4 -- "$loop_part"
 
 # Mount partition
 echo -n "* Mounting partition $loop_part on $ROOTFS..."
+sleep 0.1s # Wait for loop device to be ready
 mkdir -p -- "$ROOTFS"
 sudo mount -- "$loop_part" "$ROOTFS"
 echo " done"
@@ -99,6 +100,14 @@ sudo docker exec "$docker" sh -c 'rc-update add root default'
 sudo docker exec "$docker" sh -c 'echo "root:root" | chpasswd'
 sudo docker exec "$docker" sh -c 'mkdir -p /home'
 sudo docker exec "$docker" sh -c 'adduser -D -g "Regular User" user'
+sudo docker exec "$docker" sh -c 'mv /etc/profile.d/color_prompt.sh.disabled /etc/profile.d/color_prompt.sh'
+sudo docker exec "$docker" sh -c "sed -i 's/\$_symbol/\\\\\\\\$/g;/_symbol=/d;s/ *_symbol//g' /etc/profile.d/color_prompt.sh"
+sudo docker exec "$docker" sh -c 'echo "export MAILPATH=" > /etc/profile.d/no_mailpath.sh'
+sudo docker exec "$docker" sh -c 'echo "alias user='"'su -l user'"'" >> /root/.profile'
+sudo docker exec "$docker" sh -c 'echo "alias ls='"'ls --color=auto'"'" > /etc/profile.d/alias.sh'
+sudo docker exec "$docker" sh -c 'echo "alias ll='"'ls -lh'"'" >> /etc/profile.d/alias.sh'
+sudo docker exec "$docker" sh -c 'echo "alias la='"'ls -lAh'"'" >> /etc/profile.d/alias.sh'
+sudo docker exec "$docker" sh -c 'echo "alias l='"'ls -lah'"'" >> /etc/profile.d/alias.sh'
 sudo docker exec "$docker" sh -c 'rc-update add devfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add procfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add sysfs boot'
