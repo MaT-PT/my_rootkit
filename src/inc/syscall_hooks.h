@@ -15,7 +15,7 @@
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
 #define P_SIG_HANDLERS  p_sig_handlers  /* Variable name for the signal handler array */
 
-#define AT_LOOKUP_PARENTS 0x10000000 // Lookup only parent directories
+#define AT_LOOKUP_CREATE 0x10000000 // Assume the file is being created
 
 // Array of the original syscall function references.
 extern sysfun_t P_ORIG_SYSFUNS[__NR_syscalls];

