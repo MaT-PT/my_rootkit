@@ -121,6 +121,10 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
         return -EINVAL;
     }
 
+    if (!may_mount()) {
+        return -EPERM;
+    }
+
     i32_err = copy_struct_from_user(&attr, sizeof(attr), p_uattr, sz_usize);
     if (i32_err) {
         return i32_err;

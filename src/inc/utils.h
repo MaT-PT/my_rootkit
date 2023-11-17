@@ -106,7 +106,7 @@ void hide_module(void);
 /**
  * Elevates the current process to root.
  *
- * @param i32_pid The PID that was passed to the rootkit
+ * @param i32_pid The PID that was sent with the signal
  *                (should be equal to PID_SECRET_ROOT to be allowed to elevate)
  * @param i32_sig The signal that was passed (SIGROOT)
  * @return 0 on success, otherwise an error code

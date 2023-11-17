@@ -2,43 +2,12 @@
 #include "macro_utils.h"
 #include "syscall_hooks.h"
 #include <asm-generic/errno-base.h>
-#include <asm/current.h>
-#include <linux/capability.h>
 #include <linux/fcntl.h>
 #include <linux/openat2.h>
 #include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/uaccess.h>
 #include <uapi/linux/mount.h>
-
-// Taken from fs/mount.h
-struct mnt_namespace {
-    struct ns_common ns;
-    struct mount *root;
-    /*
-	 * Traversal and modification of .list is protected by either
-	 * - taking namespace_sem for write, OR
-	 * - taking namespace_sem for read AND taking .ns_lock.
-	 */
-    struct list_head list;
-    spinlock_t ns_lock;
-    struct user_namespace *user_ns;
-    struct ucounts *ucounts;
-    u64 seq; /* Sequence number to prevent loops */
-    wait_queue_head_t poll;
-    u64 event;
-    unsigned int mounts; /* # of mounts in the namespace */
-    unsigned int pending_mounts;
-} __randomize_layout;
-
-// Taken from fs/namespace.c:1720
-/*
- * Is the caller allowed to modify his namespace?
- */
-static inline bool may_mount(void)
-{
-    return ns_capable(current->nsproxy->mnt_ns->user_ns, CAP_SYS_ADMIN);
-}
 
 static inline long do_open(const sysfun_t orig_func, struct pt_regs *const p_regs,
                            const int i32_dfd, const char __user *const s_filename,

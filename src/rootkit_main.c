@@ -8,7 +8,10 @@
 #include <linux/printk.h>
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("[AUTHOR 1], [AUTHOR 2], [AUTHOR 3], [AUTHOR 4]");
+MODULE_AUTHOR("[AUTHOR 1]");
+MODULE_AUTHOR("[AUTHOR 2]");
+MODULE_AUTHOR("[AUTHOR 3]");
+MODULE_AUTHOR("[AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
 MODULE_VERSION("0.1");
 
@@ -17,6 +20,7 @@ static int __init rootkit_init(void)
     int i32_err;
 
     pr_info("[ROOTKIT] Module loading...\n");
+    pr_info("[ROOTKIT] * Module: %s (v%s)\n", THIS_MODULE->name, THIS_MODULE->version);
 
     // Initialize hooking
     i32_err = init_hooking();
