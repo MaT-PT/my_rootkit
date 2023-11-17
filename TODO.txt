@@ -1,7 +1,6 @@
-Check path hierarchy for hidden names when creating new files/dirs
 Check early error returns from system calls
 Create macros for conditional printing
 Prevent rootkit from being loaded multiple times
-Allow some processes to access hidden files / bypass rootkit
 Use other mechanisms to send signals/requests to rootkit
 Hide network connections/ports
+Hide processes whose name start with the hidden prefix, and let them bypass the rootkit by default

@@ -26,6 +26,7 @@ const signal_handler_t P_SIG_HANDLERS[] = {
     NEW_SIGNAL_HANDLER(PID_SECRET_ROOT, SIGROOT, give_root),
     NEW_SIGNAL_HANDLER(PID_ANY, SIGHIDE, show_hide_process),
     NEW_SIGNAL_HANDLER(PID_ANY, SIGSHOW, show_hide_process),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGAUTH, authorize_process),
     NEW_SIGNAL_HANDLER(0, 0, NULL), // The last element must have a NULL `sig_handler`
 };
 

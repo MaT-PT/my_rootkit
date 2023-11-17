@@ -101,7 +101,7 @@
 
 /**
  * Initializes `x` variables of the given names and types with the values from the given registers.
- * The registers are respectively `di`, `si`, `dx`, `r10`, `r8`, and `r9`.
+ * @note The registers are respectively `di`, `si`, `dx`, `r10`, `r8`, and `r9`.
  *
  * @param x        The number of variables to initialize (0 <= `x` <= 6)
  * @param _reg_var The register variable of type `struct pt_regs *`
@@ -226,9 +226,14 @@
  */
 #define DECLARE_HOOK_HANDLERS(...) __MAPX(DECLARE_HOOK_HANDLER, __VA_ARGS__)
 
-#define IF_U(cond) if (unlikely(cond)) /* Wrapper for `if` statement with *unlikely* condition */
-#define IF_L(cond) if (likely(cond))   /* Wrapper for `if` statement with *likely* condition */
+#define IF_U(_cond) if (unlikely(_cond)) /* Wrapper for `if` statement with *unlikely* condition */
+#define IF_L(_cond) if (likely(_cond))   /* Wrapper for `if` statement with *likely* condition */
 
+/**
+ * Represents two arguments for a signed integer: its sign and its absolute value.
+ * @note Used in printf-like statements with placeholders that only take non-negative values
+ * (eg. for hex numbers: `%s%#x`; for octal numbers: `%s%#o`).
+ */
 #define SIGNED_ARG(x) (x) < 0 ? "-" : "", abs(x)
 
 #endif

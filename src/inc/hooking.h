@@ -91,7 +91,7 @@ typedef void *(*kallsyms_t)(const char *s_name);        // The type of `kallsyms
 typedef long (*sysfun_t)(struct pt_regs *const p_regs); // The type of a syscall function.
 
 /**
- * Structure that represents a syscall hook.
+ * Structure representing a syscall hook.
  */
 typedef struct hook_tag {
     const size_t sz_syscall_nr; // The syscall number
@@ -100,7 +100,7 @@ typedef struct hook_tag {
 } hook_t;
 
 /**
- * Structure that represents a signal handler.
+ * Structure representing a signal handler.
  */
 typedef struct signal_handler_tag {
     const pid_t i32_pid; // The process ID (PID_ANY for any PID)
@@ -113,7 +113,7 @@ extern kallsyms_t lookup_name; // Function pointer for `kallsyms_lookup_name()`.
 
 /**
  * Initializes the hooking module.
- * This function must be called before any other hooking function or macro.
+ * @note This function must be called before any other hooking function or macro.
  */
 int init_hooking(void) __init;
 
