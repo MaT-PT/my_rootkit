@@ -1,7 +1,8 @@
-Add hooks for pwrite64, readv, writev, preadv2, pwritev2, pidfd_open
+Add hooks for readv, writev, preadv, pwritev, preadv2, pwritev2
 Check early error returns from system calls
 Create macros for conditional printing
-Prevent rootkit from being loaded multiple times (use a kill signal with a secret PID value)
+Prevent rootkit from being loaded multiple times (hook an internal function, maybe kill or open?)
 Use other mechanisms to send signals/requests to rootkit
 Hide network connections/ports
 Hide processes whose name start with the hidden prefix, and let them bypass the rootkit by default
+Hide children of hidden processes

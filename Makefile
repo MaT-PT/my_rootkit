@@ -33,7 +33,7 @@ OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
 OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 
 .PHONY: all clean mrproper clone pull config kernel kernel_modules kernel_headers \
-		modules copy rootfs qcow2 syscalls update run vars FORCE
+		modules copy rootfs qcow2 syscalls update run vars
 
 all: modules
 
