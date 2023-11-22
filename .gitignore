@@ -13,6 +13,7 @@
 *.order.cmd
 *.mod.c
 /modules/
+/build/
 .vscode/
 ! .vscode/c_cpp_properties.json
 /linux-*/

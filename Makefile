@@ -1,18 +1,20 @@
 define relpath
-$(shell realpath -m --relative-to='$(CURDIR)' -- '$(1)')
+$(shell realpath -m --relative-to='$(if $(2),$(2),$(CURDIR))' -- '$(1)')
 endef
 
 INIT_VARS	:= $(.VARIABLES)
+
+ROOT_DIR	:= $(shell if [ -d "$$PWD/src" ]; then echo "$$PWD"; else echo "$$PWD/.."; fi)
 
 # Default values (can be overridden by environment variables or command line arguments)
 BRANCH		?= linux-5.15.y
 DISK_IMG	?= disk.img
 NJOBS 		?= $(shell echo $$(( $$(nproc) + 0 )))
 NLOAD		?= $(shell echo "$$(nproc) * 0.85" | bc)
-TMPDIR		?= /tmp/rootkit-build
+BUILD_DIR	?= $(call relpath,$(ROOT_DIR)/build)
+TMPDIR		?= /tmp
 
 # Derived directories and files
-ROOT_DIR	:= $(shell if [ -d "$$PWD/src" ]; then echo "$$PWD"; else echo "$$PWD/.."; fi)
 SRC_DIR		:= $(call relpath,$(ROOT_DIR)/src)
 MOD_DIR		:= $(call relpath,$(ROOT_DIR)/modules)
 SCRIPT_DIR	:= $(call relpath,$(ROOT_DIR)/scripts)
@@ -21,19 +23,21 @@ DISK_QCOW2	:= $(call relpath,$(ROOT_DIR)/$(DISK_IMG:.img=.qcow2))
 DISK_IMG	:= $(call relpath,$(ROOT_DIR)/$(DISK_IMG))
 KMAKEFILE	:= $(call relpath,$(KDIR)/Makefile)
 CONFIG		:= $(call relpath,$(KDIR)/.config)
-KERNEL		:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
-KSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers) $(call relpath,$(KDIR)/modules.order)
-SYSCALLS_H	:= $(SRC_DIR)/inc/hooked_syscalls.h
-SC_C_FILES	:= $(shell find '$(SRC_DIR)/syscall_hooks' -type f -name '*.c') # Syscall hook .c files
+KVMLSYMVERS	:= $(call relpath,$(KDIR)/vmlinux.symvers)
+KMODSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers) $(call relpath,$(KDIR)/modules.order)
+KBZIMAGE	:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
 
 # Options for sub-makes
 OPTS_CFLAGS	:= -march=native -O2 -pipe $(shell command -v mold 2>&1 >/dev/null && echo "-fuse-ld=mold") $(CFLAGS)
 OPTS		:= -j$(NJOBS) -l$(NLOAD) CFLAGS='$(strip $(OPTS_CFLAGS))' TMPDIR='$(TMPDIR)'
 OPTS_KMAKE	:= $(OPTS) -C '$(KDIR)'
-OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
+OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)' \
+           	   KDIR='$(call relpath,$(KDIR),$(SRC_DIR))' \
+           	   SCRIPT_DIR='$(call relpath,$(SCRIPT_DIR),$(SRC_DIR))' \
+           	   BUILD_DIR='$(call relpath,$(BUILD_DIR),$(SRC_DIR))'
 
-.PHONY: all clean mrproper clone pull config kernel kernel_modules kernel_headers \
-		modules copy rootfs qcow2 syscalls update run vars
+.PHONY: all clean mrproper clone pull config kernel_vmlinux kernel_bzimage kernel_modules kernel \
+        kernel_headers modules copy rootfs qcow2 syscalls update run vars
 
 all: modules
 
@@ -56,34 +60,28 @@ $(KMAKEFILE):
 
 $(CONFIG): $(KMAKEFILE)
 	@echo '> Configuring kernel...'
-	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) defconfig
 	$(MAKE) $(OPTS_KMAKE) kvm_guest.config
 	@echo '> Kernel configured.'
 
-$(KERNEL): $(CONFIG)
-	@echo '> Building kernel...'
-	mkdir -p -- '$(TMPDIR)'
-	$(MAKE) $(OPTS_KMAKE) bzImage
-	@echo '> Kernel built.'
+$(KVMLSYMVERS): $(CONFIG)
+	@echo '> Building kernel vmlinux...'
+	$(MAKE) $(OPTS_KMAKE) vmlinux
+	@echo '> Kernel vmlinux built.'
 
-$(KSYMVERS): $(KERNEL)
+$(KBZIMAGE): $(KVMLSYMVERS)
+	@echo '> Building kernel bzImage...'
+	$(MAKE) $(OPTS_KMAKE) bzImage
+	@echo '> Kernel bzImage built.'
+
+$(KMODSYMVERS): $(KVMLSYMVERS)
 	@echo '> Building kernel modules...'
-	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) modules
 	@echo '> Kernel modules built.'
 
-$(SYSCALLS_H): $(SC_C_FILES)
-	@echo '> Generating header for hooked syscalls...'
-	SRC_DIR='$(SRC_DIR)' \
-		'$(SCRIPT_DIR)/gen-syscall-list.sh' '$@'
-	@echo '> Hooked syscalls header generated.'
-
 clean:
 	@echo '> Cleaning build files...'
-	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_MODULE) clean
-	$(MAKE) $(OPTS_KMAKE) M='$(ROOT_DIR)' clean
 	@echo '> Build files cleaned.'
 
 mrproper: clean
@@ -100,13 +98,16 @@ pull: clone
 
 config: $(CONFIG)
 
-kernel: $(KERNEL)
+kernel_bzimage: $(KBZIMAGE)
 
-kernel_modules: $(KSYMVERS)
+kernel_vmlinux: $(KVMLSYMVERS)
+
+kernel_modules: $(KMODSYMVERS)
+
+kernel: kernel_bzimage kernel_modules
 
 kernel_headers:
 	@echo '> Building kernel headers...'
-	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_KMAKE) headers
 	@echo '> Kernel headers built.'
 
@@ -115,21 +116,20 @@ rootfs: $(DISK_IMG)
 qcow2: $(DISK_QCOW2)
 
 syscalls:
-	$(MAKE) -B '$(SYSCALLS_H)' # Force rebuild
+	$(MAKE) $(OPTS_MODULE) syscalls
 
-modules: $(KSYMVERS) $(SYSCALLS_H)
+modules: $(KMODSYMVERS)
 	@echo '> Building modules...'
-	mkdir -p -- '$(TMPDIR)'
 	$(MAKE) $(OPTS_MODULE) modules
 	@echo '> Modules built.'
 
 copy: modules
 	@echo '> Copying modules...'
 	mkdir -p -- '$(MOD_DIR)'
-	cp -- '$(SRC_DIR)'/*.ko '$(MOD_DIR)'
+	cp -v -- '$(BUILD_DIR)'/*.ko '$(MOD_DIR)'
 	@echo '> Modules copied.'
 
-update: kernel kernel_headers rootfs copy
+update: kernel_bzimage kernel_headers rootfs copy
 	@echo '> Updating kernel image...'
 	DISK_IMG='$(DISK_IMG)' KERNEL_DIR='$(KDIR)' MODULE_DIR='$(MOD_DIR)' \
 		'$(SCRIPT_DIR)/update-kernel-img.sh' --no-qemu
