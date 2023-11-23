@@ -111,6 +111,7 @@ sudo docker exec "$docker" sh -c 'echo "alias l='"'ls -lah'"'" >> /etc/profile.d
 sudo docker exec "$docker" sh -c 'rc-update add devfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add procfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add sysfs boot'
+sudo docker exec "$docker" sh -c 'rc-update add hostname boot'
 sudo docker exec "$docker" sh -c 'rc-update add networking boot'
 
 echo -n "* Copying file system..."
