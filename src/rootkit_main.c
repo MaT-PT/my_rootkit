@@ -1,5 +1,6 @@
 #include "rootkit_main.h"
 
+#include "constants.h"
 #include "hooking.h"
 #include "syscall_hooks.h"
 #include "utils.h"
@@ -7,6 +8,7 @@
 #include <linux/module.h>
 #include <linux/printk.h>
 
+MODULE_ALIAS(MOD_ALIAS);
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("[AUTHOR 1]");
 MODULE_AUTHOR("[AUTHOR 2]");

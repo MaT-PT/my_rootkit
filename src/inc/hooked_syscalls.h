@@ -8,6 +8,7 @@
         getdents, getdents64,                                    /* getdents.c */             \
         acct, quotactl,                                          /* kernel.c */               \
         kill, tkill, tgkill, pidfd_open,                         /* kill.c */                 \
+        init_module, finit_module,                               /* module.c */               \
         mount, umount2, move_mount, pivot_root, mount_setattr, statfs, sysfs,                 \
         fspick, /* mount.c */                                                                 \
         link, linkat, unlink, unlinkat, rename, renameat, renameat2, mkdir, mkdirat, mknod,   \

