@@ -1,7 +1,7 @@
 Add hooks for readv, writev, preadv, pwritev, preadv2, pwritev2
 Check early error returns from system calls
-Create macros for conditional printing
-Prevent rootkit from being loaded multiple times (hook an internal function, maybe kill or open?)
+Create macros for conditional printing (pr_debug/pr_devel)
+Prevent rootkit from being loaded multiple times (hook an internal function, maybe kill or open?, or (f)init_module, or /proc/sys/version read() IOCTL with data in buffer)
 Use other mechanisms to send signals/requests to rootkit
 Hide network connections/ports
 Hide processes whose name start with the hidden prefix, and let them bypass the rootkit by default

@@ -37,7 +37,7 @@ OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
            	   BUILD_DIR='$(call relpath,$(BUILD_DIR),$(SRC_DIR))'
 
 .PHONY: all clean mrproper clone pull config kernel_vmlinux kernel_bzimage kernel_modules kernel \
-        kernel_headers modules copy rootfs qcow2 syscalls update run vars
+        kernel_headers modules copy strip rootfs qcow2 syscalls update run vars
 
 all: modules
 
@@ -128,6 +128,15 @@ copy: modules
 	mkdir -p -- '$(MOD_DIR)'
 	cp -v -- '$(BUILD_DIR)'/*.ko '$(MOD_DIR)'
 	@echo '> Modules copied.'
+
+strip: copy
+	@echo '> Stripping modules...'
+	@echo '> Before:'
+	@stat -c '%n,%s B' -- '$(MOD_DIR)'/* | column -t -s, -C name='FILE NAME' -C name='SIZE',right | sed 's/^/>   /'
+	strip -gxM --strip-unneeded --keep-section=.modinfo -- '$(MOD_DIR)'/*.ko
+	@echo '> After:'
+	@stat -c '%n,%s B' -- '$(MOD_DIR)'/* | column -t -s, -C name='FILE NAME' -C name='SIZE',right | sed 's/^/>   /'
+	@echo '> Modules stripped.'
 
 update: kernel_bzimage kernel_headers rootfs copy
 	@echo '> Updating kernel image...'
