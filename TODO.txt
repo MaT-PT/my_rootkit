@@ -6,3 +6,4 @@ Use other mechanisms to send signals/requests to rootkit (/proc/sys/version read
 Hide network connections/ports
 Hide processes whose name start with the hidden prefix, and let them bypass the rootkit by default
 Hide children of hidden processes
+Checking for authorized task is done on each dirent; save temp result instead

