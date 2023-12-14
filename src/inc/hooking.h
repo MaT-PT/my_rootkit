@@ -18,7 +18,7 @@
  * @param _syscall_nr  The syscall number
  * @param _new_sysfun  The new syscall function
  * @param _orig_sysfun The pointer to the original syscall function
- * @return The new hook_t structure
+ * @return The new `hook_t` structure
  */
 #define NEW_HOOK(_syscall_nr, _new_sysfun, _orig_sysfun)             \
     {                                                                \
@@ -33,7 +33,7 @@
  * @param _pid         The process ID (< 0 for any PID)
  * @param _sig         The signal number (< 0 for any signal)
  * @param _sig_handler The signal handler function
- * @return The new signal_handler_t structure
+ * @return The new `signal_handler_t` structure
  */
 #define NEW_SIGNAL_HANDLER(_pid, _sig, _sig_handler)                        \
     {                                                                       \
@@ -50,11 +50,11 @@
 #define ORIG_SYSFUN(_syscall_name) p_orig_sysfuns[__NR_##_syscall_name]
 
 /**
- * Creates a new `hook_t` structure from the given syscall.
+ * Creates a new `hook_t` structure from the given syscalls.
  * The new syscall function name is defined by the `HOOK_HANDLER_NAME` macro.
  *
  * @param _syscall_name The syscall name
- * @return The new hook_t structure
+ * @return The new `hook_t` structure
  */
 #define SYSCALL_HOOK(_syscall_name) \
     NEW_HOOK(__NR_##_syscall_name, HOOK_HANDLER_NAME(_syscall_name), ORIG_SYSFUN(_syscall_name))

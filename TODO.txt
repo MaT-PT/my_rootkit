@@ -4,6 +4,5 @@ Create macros for conditional printing (pr_debug/pr_devel)
 Print with current pid and process name
 Use other mechanisms to send signals/requests to rootkit (/proc/sys/version read() IOCTL with data in buffer)
 Hide network connections/ports
-Hide processes whose name start with the hidden prefix, and let them bypass the rootkit by default
-Handle multiple hidden prefixes
 Keylogger to hidden file?
+Change process parent to 1
