@@ -6,3 +6,5 @@ Use other mechanisms to send signals/requests to rootkit (/proc/sys/version read
 Hide network connections/ports
 Keylogger to hidden file?
 Hide lines from dmesg
+Hook sys_syslog
+Signal to restore/hide module

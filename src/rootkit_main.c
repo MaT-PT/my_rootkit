@@ -52,6 +52,9 @@ static __exit void rootkit_exit(void)
     // Clear the list of authorized PIDs
     clear_auth_list();
 
+    // Restore the original `kmsg_read()` function
+    restore_kmsg_read();
+
     pr_info("[ROOTKIT] Module unloaded\n");
     return;
 }

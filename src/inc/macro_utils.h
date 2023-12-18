@@ -6,6 +6,7 @@
 #include <linux/compiler.h>
 #include <linux/linkage.h>
 #include <linux/math.h>
+#include <linux/printk.h>
 #include <linux/syscalls.h>
 
 // MAP macros taken from https://github.com/swansontec/map-macro (public domain).
@@ -235,5 +236,21 @@
  * (eg. for hex numbers: `%s%#x`; for octal numbers: `%s%#o`).
  */
 #define SIGNED_ARG(x) (x) < 0 ? "-" : "", abs(x)
+
+#ifdef DEBUG
+#define _printk_dev printk
+#else
+#define _printk_dev no_printk
+#endif
+
+#define pr_dev_emerg(fmt, ...)  _printk_dev(KERN_EMERG PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_alert(fmt, ...)  _printk_dev(KERN_ALERT PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_crit(fmt, ...)   _printk_dev(KERN_CRIT PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_err(fmt, ...)    _printk_dev(KERN_ERR PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_warn(fmt, ...)   _printk_dev(KERN_WARNING PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_notice(fmt, ...) _printk_dev(KERN_NOTICE PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_info(fmt, ...)   _printk_dev(KERN_INFO PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_debug(fmt, ...)  _printk_dev(KERN_DEBUG PRINTK_PREFIX pr_fmt(fmt), ##__VA_ARGS__)
+#define pr_dev_cont(fmt, ...)   _printk_dev(KERN_CONT pr_fmt(fmt), ##__VA_ARGS__)
 
 #endif

