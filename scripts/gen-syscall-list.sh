@@ -39,6 +39,7 @@ for file in $files; do
     echo "$syscalls" | sed 's/, /\n/g' | sed '$d' | sed 's/^/  * /' >&2
 done | sed '$s@, /\*@ /*@' | sed '$s/\s*\\$//g' >> "$SYSCALLS_H"
 
+# Format the file if clang-format is available
 if command -v clang-format &>/dev/null; then
     clang-format -i --style="file:$DIR/../.clang-format" -- "$SYSCALLS_H"
 fi

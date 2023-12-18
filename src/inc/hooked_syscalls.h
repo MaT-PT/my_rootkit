@@ -6,7 +6,7 @@
         chdir, chroot, chmod, fchmodat, chown, lchown, fchownat, /* chx.c */                  \
         uselib, execve, execveat,                                /* exec.c */                 \
         getdents, getdents64,                                    /* getdents.c */             \
-        acct, quotactl,                                          /* kernel.c */               \
+        acct, quotactl, syslog,                                  /* kernel.c */               \
         kill, tkill, tgkill, pidfd_open,                         /* kill.c */                 \
         init_module, finit_module,                               /* module.c */               \
         mount, umount2, move_mount, pivot_root, mount_setattr, statfs, sysfs,                 \

