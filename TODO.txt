@@ -4,4 +4,3 @@ Print with current pid and process name
 Use other mechanisms to send signals/requests to rootkit (/proc/sys/version read() IOCTL with data in buffer)
 Hide network connections/ports
 Keylogger to hidden file?
-Signal to restore/hide module
