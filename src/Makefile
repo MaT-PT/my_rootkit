@@ -15,6 +15,12 @@ SYSCALLS_H	:= $(SRC_DIR)/inc/hooked_syscalls.h
 SC_DIR 		:= $(call relpath,$(SRC_DIR)/syscall_hooks)
 SC_C_FILES	:= $(SC_DIR) $(shell find '$(SC_DIR)' -type f -name '*.c') # Syscall hook .c files
 
+ifeq ($(DEBUG),1)
+CFLAGS_DBG := $(CFLAGS) -DDEBUG
+else
+CFLAGS_DBG := $(CFLAGS)
+endif
+
 .PHONY: all modules clean syscalls
 
 all: modules
@@ -29,7 +35,7 @@ $(SYSCALLS_H): $(SC_C_FILES)
 	@echo '> Hooked syscalls header generated.'
 
 modules: $(BUILD_DIR) $(SYSCALLS_H)
-	$(MAKE) -C "$(KDIR)" M="$(BUILD_DIR)" CFLAGS='$(CFLAGS)' src='$(SRC_DIR)' modules
+	$(MAKE) -C "$(KDIR)" M="$(BUILD_DIR)" CFLAGS='$(CFLAGS_DBG)' src='$(SRC_DIR)' modules
 
 clean: $(BUILD_DIR)
 	$(MAKE) -C "$(KDIR)" M="$(BUILD_DIR)" CFLAGS='$(CFLAGS)' src='$(SRC_DIR)' clean

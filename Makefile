@@ -41,6 +41,9 @@ OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
 
 all: modules
 
+debug: OPTS_MODULE += DEBUG=1
+debug: all
+
 %.img:
 	@echo '> Making rootfs image: $@...'
 	DISK_IMG='$@' \

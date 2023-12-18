@@ -11,6 +11,8 @@ typedef struct string_tag {
 
 extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/directories
 
+#define PRINTK_PREFIX "[ROOTKIT] "
+
 #define HIDDEN_PREFIXES ".rootkit_", "rootkit_" /* List of prefixes for hidden files/directories */
 
 #define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */

