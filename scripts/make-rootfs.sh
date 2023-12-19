@@ -4,7 +4,7 @@
 if [ -z "$DISK_IMG" ]; then
     DISK_IMG="disk.img"
 fi
-DISK_SIZE="512M"
+DISK_SIZE="2G"
 ROOTFS="/tmp/my-rootfs"
 HOSTNAME="lfs2600"
 BANNER="$(dirname -- "$0")/banner"
@@ -112,6 +112,7 @@ sudo docker exec "$docker" sh -c 'echo "resize > /dev/null" > /etc/profile.d/res
 sudo docker exec "$docker" sh -c 'rc-update add devfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add procfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add sysfs boot'
+sudo docker exec "$docker" sh -c 'rc-update add local boot'
 sudo docker exec "$docker" sh -c 'rc-update add hostname boot'
 sudo docker exec "$docker" sh -c 'rc-update add networking boot'
 

