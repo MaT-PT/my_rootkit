@@ -1,4 +1,5 @@
 #include "macro_utils.h"
+#include "signal_hooks.h"
 #include "syscall_hooks.h"
 #include "utils.h"
 #include <asm-generic/errno-base.h>

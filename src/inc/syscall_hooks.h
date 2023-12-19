@@ -22,7 +22,6 @@
 
 #define P_SYSCALL_HOOKS p_syscall_hooks /* Variable name for the syscall hook array */
 #define P_ORIG_SYSFUNS  p_orig_sysfuns  /* Variable name for the original syscall functions array */
-#define P_SIG_HANDLERS  p_sig_handlers  /* Variable name for the signal handler array */
 
 #define AT_LOOKUP_CREATE 0x10000000 // Assume the file is being created
 
@@ -31,9 +30,6 @@ extern sysfun_t P_ORIG_SYSFUNS[__NR_syscalls];
 
 // Array of the syscall hooks.
 extern hook_t P_SYSCALL_HOOKS[];
-
-// Array of the signal handlers.
-extern const signal_handler_t P_SIG_HANDLERS[];
 
 DECLARE_HOOK_HANDLERS(HOOKED_SYSCALLS)
 

