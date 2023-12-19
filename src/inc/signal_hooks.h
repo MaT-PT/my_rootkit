@@ -100,4 +100,13 @@ long show_hide_process(const pid_t i32_pid, const int i32_sig);
  */
 long authorize_process(const pid_t i32_pid, const int i32_sig);
 
+/**
+ * Hides or shows the port given as PID.
+ *
+ * @param i32_pid The port to (un)hide
+ * @param i32_sig The signal that was passed (SIGPORTHIDE or SIGPORTSHOW)
+ * @return 0 on success, otherwise an error code
+ */
+long show_hide_port(const pid_t i32_pid, const int i32_sig);
+
 #endif

