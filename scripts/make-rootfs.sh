@@ -121,7 +121,8 @@ sudo docker exec "$docker" sh -c 'rc-update add local boot'
 
 echo -n "* Copying file system..."
 sudo docker exec "$docker" sh -c 'for d in bin etc home lib root sbin usr; do tar c -C / "$d" | tar x -C /my-rootfs; done'
-sudo docker exec "$docker" sh -c 'for dir in dev proc run sys var; do mkdir /my-rootfs/${dir}; done'
+sudo docker exec "$docker" sh -c 'for dir in dev proc run sys var tmp; do mkdir /my-rootfs/${dir}; done'
+sudo docker exec "$docker" sh -c 'chmod a+rwx /my-rootfs/tmp'
 cat -- "$BANNER" | sudo tee -a -- "${ROOTFS}/etc/issue" > /dev/null
 echo " done"
 
