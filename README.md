@@ -8,7 +8,7 @@ Linux rootkit project for *École 2600*.
 
 ```bash
 # Debian-like
-sudo apt install build-essential git qemu-system-x86 parted libguestfs-tools flex libelf-dev docker.io grub-pc-bin
+sudo apt install build-essential git qemu-system-x86 parted libguestfs-tools flex libelf-dev docker.io grub-pc-bin bison libssl-dev
 ```
 
 ## Building
