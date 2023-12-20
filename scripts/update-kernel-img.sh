@@ -114,7 +114,7 @@ echo "* Done"
 # Update modules
 echo "* Updating modules..."
 sudo find "$MODULE_DIR" -type f -name '*.ko' -exec echo -n '   * ' \; \
--exec cp -v -- '{}' "${ROOTFS}/root/" \;
+    -exec cp -v -- '{}' "${ROOTFS}/root/" \;
 echo "* Done"
 
 # Cleanup
