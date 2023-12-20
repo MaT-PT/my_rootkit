@@ -16,6 +16,9 @@ TEST_DIR="$(dirname -- "$0")/tests"
 if [ -z "$MODULE_DIR" ]; then
     MODULE_DIR="./modules"
 fi
+if [ -z "$COMPANION" ]; then
+    COMPANION="./companion/companion"
+fi
 ########################################################################
 
 if [ -z "$KERNEL_DIR" ]; then
@@ -89,6 +92,13 @@ if [ -d "$TEST_DIR" ]; then
 else
     echo "  * Warning: test dir $TEST_DIR not found, skipping..."
 fi
+echo "* Done"
+
+# Update companion program
+echo "* Updating companion program..."
+echo -n "  * "
+sudo cp -v -- "$COMPANION" "${ROOTFS}/home/user/"
+sudo chown -- user:user "${ROOTFS}/home/user/companion"
 echo "* Done"
 
 # Install kernel modules

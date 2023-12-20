@@ -26,6 +26,8 @@ CONFIG		:= $(call relpath,$(KDIR)/.config)
 KVMLSYMVERS	:= $(call relpath,$(KDIR)/vmlinux.symvers)
 KMODSYMVERS	:= $(call relpath,$(KDIR)/Module.symvers) $(call relpath,$(KDIR)/modules.order)
 KBZIMAGE	:= $(call relpath,$(KDIR)/arch/x86/boot/bzImage)
+COMP_DIR	:= $(call relpath,$(ROOT_DIR)/companion)
+COMPANION	:= $(call relpath,$(COMP_DIR)/companion)
 
 # Options for sub-makes
 OPTS_CFLAGS	:= -march=native -O2 -pipe $(shell command -v mold 2>&1 >/dev/null && echo "-fuse-ld=mold") $(CFLAGS)
@@ -37,7 +39,7 @@ OPTS_MODULE	:= $(OPTS) -C '$(SRC_DIR)' BRANCH='$(BRANCH)' ROOT_DIR='$(ROOT_DIR)'
            	   BUILD_DIR='$(call relpath,$(BUILD_DIR),$(SRC_DIR))'
 
 .PHONY: all clean mrproper clone pull config kernel_vmlinux kernel_bzimage kernel_modules kernel \
-        kernel_headers modules copy strip rootfs qcow2 syscalls update run vars
+        kernel_headers modules copy strip rootfs qcow2 syscalls update run vars companion
 
 all: modules
 
@@ -46,6 +48,11 @@ debug: all
 
 nopersist: OPTS_MODULE += NOPERSIST=1
 nopersist: all
+
+$(COMPANION): $(COMPANION).c
+	@echo '> Building companion...'
+	$(MAKE) $(OPTS) -C '$(COMP_DIR)' companion
+	@echo '> Companion built.'
 
 %.img:
 	@echo '> Making rootfs image: $@...'
@@ -84,6 +91,8 @@ $(KMODSYMVERS): $(KVMLSYMVERS)
 	@echo '> Building kernel modules...'
 	$(MAKE) $(OPTS_KMAKE) modules
 	@echo '> Kernel modules built.'
+
+companion: $(COMPANION)
 
 clean:
 	@echo '> Cleaning build files...'
@@ -144,9 +153,9 @@ strip: copy
 	@stat -c '%n,%s B' -- '$(MOD_DIR)'/* | column -t -s, -C name='FILE NAME' -C name='SIZE',right | sed 's/^/>   /'
 	@echo '> Modules stripped.'
 
-update: kernel_bzimage kernel_headers rootfs copy
+update: kernel_bzimage kernel_headers rootfs copy companion
 	@echo '> Updating kernel image...'
-	DISK_IMG='$(DISK_IMG)' KERNEL_DIR='$(KDIR)' MODULE_DIR='$(MOD_DIR)' \
+	DISK_IMG='$(DISK_IMG)' KERNEL_DIR='$(KDIR)' MODULE_DIR='$(MOD_DIR)' COMPANION='$(COMPANION)' \
 		'$(SCRIPT_DIR)/update-kernel-img.sh' --no-qemu
 	@echo '> Kernel image updated.'
 

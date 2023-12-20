@@ -14,8 +14,8 @@
 *.mod.c
 /modules/
 /build/
-.vscode/
-! .vscode/c_cpp_properties.json
+# .vscode/
+# ! .vscode/c_cpp_properties.json
 /linux-*/
 *.img
 *.qcow2
