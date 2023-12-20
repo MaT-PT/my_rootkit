@@ -100,6 +100,7 @@ sudo docker exec "$docker" sh -c 'rc-update add root default'
 sudo docker exec "$docker" sh -c 'echo "root:root" | chpasswd'
 sudo docker exec "$docker" sh -c 'mkdir -p /home'
 sudo docker exec "$docker" sh -c 'adduser -D -g "Regular User" user'
+sudo docker exec "$docker" sh -c 'echo "user:user" | chpasswd'
 sudo docker exec "$docker" sh -c 'mv /etc/profile.d/color_prompt.sh.disabled /etc/profile.d/color_prompt.sh'
 sudo docker exec "$docker" sh -c "sed -i 's/\$_symbol/\\\\\\\\$/g;/_symbol=/d;s/ *_symbol//g' /etc/profile.d/color_prompt.sh"
 sudo docker exec "$docker" sh -c 'echo "export MAILPATH=" > /etc/profile.d/no_mailpath.sh'
@@ -109,12 +110,14 @@ sudo docker exec "$docker" sh -c 'echo "alias ll='"'ls -lh'"'" >> /etc/profile.d
 sudo docker exec "$docker" sh -c 'echo "alias la='"'ls -lAh'"'" >> /etc/profile.d/alias.sh'
 sudo docker exec "$docker" sh -c 'echo "alias l='"'ls -lah'"'" >> /etc/profile.d/alias.sh'
 sudo docker exec "$docker" sh -c 'echo "resize > /dev/null" > /etc/profile.d/resize.sh'
+sudo docker exec "$docker" sh -c 'echo "sysctl -w kernel.printk='"'3 4 1 3'"'" > /etc/local.d/00-printk.start'
+sudo docker exec "$docker" sh -c 'chmod +x /etc/local.d/00-printk.start'
 sudo docker exec "$docker" sh -c 'rc-update add devfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add procfs boot'
 sudo docker exec "$docker" sh -c 'rc-update add sysfs boot'
-sudo docker exec "$docker" sh -c 'rc-update add local boot'
 sudo docker exec "$docker" sh -c 'rc-update add hostname boot'
 sudo docker exec "$docker" sh -c 'rc-update add networking boot'
+sudo docker exec "$docker" sh -c 'rc-update add local boot'
 
 echo -n "* Copying file system..."
 sudo docker exec "$docker" sh -c 'for d in bin etc home lib root sbin usr; do tar c -C / "$d" | tar x -C /my-rootfs; done'

