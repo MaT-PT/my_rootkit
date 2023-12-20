@@ -1,6 +1,4 @@
 Add hooks for readv, writev, preadv, pwritev, preadv2, pwritev2
-Check early error returns from system calls
 Print with current pid and process name
 Use other mechanisms to send signals/requests to rootkit (/proc/sys/version read() IOCTL with data in buffer)
-Hide network connections/ports
-Keylogger to hidden file?
+Keylogger to hidden file
