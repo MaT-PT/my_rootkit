@@ -257,6 +257,9 @@ int main(void)
             hide_port(get_port());
             break;
 
+        case 'q':
+            break;
+
         default:
             printf("Invalid option\n");
             break;
