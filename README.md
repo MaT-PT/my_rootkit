@@ -12,6 +12,8 @@ It uses **syscall hooking** for most of its functionalities, and **signals** for
 
 This project also includes a complete **automated build system** (using Makefiles) for the kernel and the **root filesystem**, and easy **running with QEMU**.
 
+It also includes a companion program that is compiled and copied to the home directory of `user` (`/home/user`) in the RootFS.
+
 ### Features
 
 #### RootFS
@@ -205,6 +207,9 @@ make DISK_IMG=rolling.img qcow2
 <summary><h3>Individual Makefile targets</h3></summary>
 
 ```bash
+# Build companion program (can be found in ./companion/)
+make companion
+
 # Build rootkit module (default; implies make kernel_modules)
 make modules
 
