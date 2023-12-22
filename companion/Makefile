@@ -1,5 +1,7 @@
 CC		?= gcc
 
+TARGET	:= companion
+
 REMOTE_ADDR	?= "194.163.157.141"
 REMOTE_PORT	?= 31337
 LOCAL_PORT	?= 31337
@@ -7,9 +9,12 @@ LOCAL_PORT	?= 31337
 CFLAGS_EXTRA	:= -Wall -Wextra -Werror -O2 -s -static
 CFLAGS_PREPROC	:= -DREMOTE_ADDR='$(REMOTE_ADDR)' -DREMOTE_PORT=$(REMOTE_PORT) -DLOCAL_PORT=$(LOCAL_PORT)
 
-.PHONY: all
+.PHONY: all clean
 
-all: companion
+all: $(TARGET)
 
-companion: companion.c
+$(TARGET): $(TARGET).c
 	$(CC) $(CFLAGS) $(CFLAGS_EXTRA) $(CFLAGS_PREPROC) -o $@ $<
+
+clean:
+	rm -f -- *.o $(TARGET)

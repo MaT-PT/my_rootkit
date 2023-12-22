@@ -97,6 +97,7 @@ companion: $(COMPANION)
 clean:
 	@echo '> Cleaning build files...'
 	$(MAKE) $(OPTS_MODULE) clean
+	$(MAKE) -C '$(COMP_DIR)' clean
 	@echo '> Build files cleaned.'
 
 mrproper: clean
